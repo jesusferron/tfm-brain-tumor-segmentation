@@ -1,0 +1,341 @@
+{
+  "dataset": {
+    "name": "BraTS 2024 Challenge",
+    "synapse_id": "syn53708249",
+    "alias": "brats2024",
+    "type": "Synapse Project",
+    "source_url": "https://www.synapse.org/Synapse:syn53708249/wiki/627759",
+    "data_folder": {
+      "name": "Data",
+      "synapse_id": "syn64952546",
+      "url": "https://www.synapse.org/Synapse:syn64952546",
+      "type": "Synapse Folder"
+    }
+  },
+  "source_metadata": {
+    "extracted_at_utc": "2026-05-13T08:29:37Z",
+    "wiki_id": "627759",
+    "wiki_title": "Data Access/Download",
+    "wiki_created_on": "2024-05-01T19:11:54.560Z",
+    "wiki_modified_on": "2026-04-28T18:57:15.940Z",
+    "project_created_on": "2024-02-28T23:21:23.899Z",
+    "project_modified_on": "2025-12-17T21:04:47.447Z",
+    "data_folder_created_on": "2025-03-04T03:10:03.653Z",
+    "data_folder_modified_on": "2025-06-20T18:24:01.046Z",
+    "sources": [
+      "https://www.synapse.org/Synapse:syn53708249/wiki/627759",
+      "https://repo-prod.prod.sagebase.org/repo/v1/entity/syn53708249/wiki/627759",
+      "https://repo-prod.prod.sagebase.org/repo/v1/entity/syn53708249",
+      "https://repo-prod.prod.sagebase.org/repo/v1/entity/syn64952546"
+    ]
+  },
+  "access": {
+    "availability": "The BraTS 2024 datasets are available to registered Synapse users after accepting the post-challenge terms and conditions.",
+    "steps": [
+      "Open the Data folder in Synapse.",
+      "Use Request Access in the Data view.",
+      "Review and accept the post-challenge terms and conditions.",
+      "After approval/acceptance, download the files from the Data folder."
+    ],
+    "requires_synapse_account": true,
+    "requires_post_challenge_terms_acceptance": true,
+    "content_downloads_may_require_access_approval": true
+  },
+  "license_and_use": {
+    "license": "CC-BY-NC 4.0",
+    "license_url": "https://creativecommons.org/licenses/by-nc/4.0/",
+    "commercial_use_allowed": false,
+    "citation_required": true,
+    "attribution_statement": "Data used in this publication were obtained as part of the Brain Tumor Segmentation (BraTS) Challenge project through Synapse ID: syn53708249.",
+    "privacy_note": "Accepting the terms and downloading data allows Sage Bionetworks to share download activity and Synapse user profile information with the challenge organizers for dataset-related purposes.",
+    "mlperf_note": "The Synapse terms describe MLPerf benchmark use as non-commercial when BraTS data usage and citation requirements are followed."
+  },
+  "citation_requirements": [
+    {
+      "scope": "Any dataset and/or MedPerf client",
+      "references": [
+        {
+          "title": "Federated benchmarking of medical artificial intelligence with MedPerf",
+          "venue": "Nature Machine Intelligence 5:799-810 (2023)",
+          "doi": "https://doi.org/10.1038/s42256-023-00652-2"
+        }
+      ]
+    },
+    {
+      "scope": "BraTS-GLI (2024)",
+      "references": [
+        {
+          "arxiv": "https://arxiv.org/abs/2405.18368",
+          "doi": "https://doi.org/10.48550/arXiv.2405.18368"
+        }
+      ]
+    },
+    {
+      "scope": "BraTS-Local-Inpainting",
+      "references": [
+        {
+          "arxiv": "https://arxiv.org/abs/2305.08992",
+          "doi": "https://doi.org/10.48550/arXiv.2305.08992"
+        }
+      ],
+      "additional_note": "Also cite the BraTS-GLI 2023 manuscripts because this challenge operates on the BraTS-GLI 2023 dataset."
+    },
+    {
+      "scope": "BraTS-MEN-RT",
+      "references": [
+        {
+          "arxiv": "https://arxiv.org/abs/2405.18383"
+        }
+      ]
+    },
+    {
+      "scope": "BraTS-MET",
+      "references": [
+        {
+          "year": "2023",
+          "arxiv": "https://arxiv.org/abs/2306.00838",
+          "doi": "https://doi.org/10.48550/arXiv.2306.00838"
+        },
+        {
+          "year": "2024",
+          "status": "Coming soon in source wiki"
+        }
+      ]
+    },
+    {
+      "scope": "BraTS-MRI-Synthesis",
+      "references": [
+        {
+          "arxiv": "https://arxiv.org/abs/2305.09011",
+          "doi": "https://doi.org/10.48550/arXiv.2305.09011"
+        }
+      ],
+      "additional_note": "Also cite the BraTS-GLI 2023 manuscripts because the BraSyn challenge operates on the BraTS-GLI 2023 dataset."
+    },
+    {
+      "scope": "BraTS-Path",
+      "references": [
+        {
+          "arxiv": "https://arxiv.org/abs/2405.10871"
+        }
+      ]
+    },
+    {
+      "scope": "BraTS-PED",
+      "references": [
+        {
+          "year": "2023",
+          "arxiv": "https://arxiv.org/abs/2305.17033",
+          "doi": "https://doi.org/10.48550/arXiv.2305.17033"
+        },
+        {
+          "year": "2024",
+          "arxiv": "https://arxiv.org/abs/2404.15009",
+          "doi": "https://doi.org/10.48550/arXiv.2404.15009"
+        }
+      ]
+    },
+    {
+      "scope": "BraTS-SSA",
+      "references": [
+        {
+          "title": "The Brain Tumor Segmentation (BraTS) Challenge 2023: Glioma Segmentation in Sub-Saharan Africa Patient Population (BraTS-Africa)",
+          "arxiv": "https://arxiv.org/abs/2305.19369",
+          "doi": "https://doi.org/10.48550/arXiv.2305.19369"
+        }
+      ]
+    }
+  ],
+  "data_collections": [
+    {
+      "name": "BraTS-GLI",
+      "synapse_id": "syn59059776",
+      "type": "Folder",
+      "total_child_count": 5,
+      "sum_file_sizes_bytes": 48103153851,
+      "sum_file_sizes_human": "44.80 GiB",
+      "created_on": "2024-05-06T23:11:49.407Z",
+      "modified_on": "2025-06-20T19:17:54.533Z"
+    },
+    {
+      "name": "BraTS-GoAT",
+      "synapse_id": "syn68156890",
+      "type": "Folder",
+      "total_child_count": 2,
+      "sum_file_sizes_bytes": 16861,
+      "sum_file_sizes_human": "16.46 KiB",
+      "created_on": "2025-06-05T21:51:00.405Z",
+      "modified_on": "2025-06-05T21:51:06.358Z"
+    },
+    {
+      "name": "BraTS-MEN-RT",
+      "synapse_id": "syn59059779",
+      "type": "Folder",
+      "total_child_count": 5,
+      "sum_file_sizes_bytes": 12971308910,
+      "sum_file_sizes_human": "12.08 GiB",
+      "created_on": "2024-05-06T23:11:56.318Z",
+      "modified_on": "2025-09-10T05:25:07.308Z"
+    },
+    {
+      "name": "BraTS-MET",
+      "synapse_id": "syn68156869",
+      "type": "Folder",
+      "total_child_count": 2,
+      "sum_file_sizes_bytes": 2158,
+      "sum_file_sizes_human": "2.11 KiB",
+      "created_on": "2025-06-05T21:34:37.702Z",
+      "modified_on": "2025-06-05T21:34:37.702Z"
+    },
+    {
+      "name": "BraTS-PED",
+      "synapse_id": "syn68156871",
+      "type": "Folder",
+      "total_child_count": 2,
+      "sum_file_sizes_bytes": 1890,
+      "sum_file_sizes_human": "1.85 KiB",
+      "created_on": "2025-06-05T21:39:02.615Z",
+      "modified_on": "2025-06-05T21:39:02.615Z"
+    },
+    {
+      "name": "BraTS-Path",
+      "synapse_id": "syn59761935",
+      "type": "Folder",
+      "total_child_count": 2,
+      "sum_file_sizes_bytes": 867,
+      "sum_file_sizes_human": "867 B",
+      "created_on": "2024-05-21T22:13:21.599Z",
+      "modified_on": "2025-03-04T03:16:58.479Z"
+    },
+    {
+      "name": "BraTS-SSA",
+      "synapse_id": "syn59059780",
+      "type": "Folder",
+      "total_child_count": 2,
+      "sum_file_sizes_bytes": 867,
+      "sum_file_sizes_human": "867 B",
+      "created_on": "2024-05-06T23:12:01.758Z",
+      "modified_on": "2025-04-08T23:36:37.149Z"
+    },
+    {
+      "name": "MLCube Resources",
+      "synapse_id": "syn61956466",
+      "type": "Folder",
+      "total_child_count": 4,
+      "sum_file_sizes_bytes": 122766892,
+      "sum_file_sizes_human": "117.08 MiB",
+      "created_on": "2024-08-03T21:34:53.564Z",
+      "modified_on": "2025-06-20T19:16:48.097Z"
+    }
+  ],
+  "totals": {
+    "listed_collections": 8,
+    "listed_files": 24,
+    "sum_file_sizes_bytes": 61197252296,
+    "sum_file_sizes_human": "56.99 GiB"
+  },
+  "local_dataset_match": {
+    "matched_at_utc": "2026-05-13T10:03:30Z",
+    "local_root": "/Volumes/External M2/Datos/TFM-datasets",
+    "ignored_local_paths": [
+      "_comprimidos"
+    ],
+    "match_report_csv": "data/brats_2024_local_dataset_match.csv",
+    "summary": {
+      "synapse_file_rows": 24,
+      "matched_rows": 24,
+      "matched_extracted_rows": 5,
+      "matched_md5_rows": 19,
+      "local_nifti_files": 9927,
+      "local_non_dsstore_files": 9942,
+      "local_file_bytes_excluding_dsstore_and_compressed_folder": 61937337838,
+      "local_file_size_human": "57.68 GiB"
+    },
+    "imaging_package_matches": [
+      {
+        "synapse_file": "BraTS2024-BraTS-GLI-TrainingData.zip",
+        "synapse_id": "syn60086071",
+        "local_path": "/Volumes/External M2/Datos/TFM-datasets/training_data1_v2",
+        "cases": 1350,
+        "nifti_files": 6750,
+        "modalities": {
+          "seg": 1350,
+          "t1c": 1350,
+          "t1n": 1350,
+          "t2f": 1350,
+          "t2w": 1350
+        },
+        "local_size_bytes": 37960292693,
+        "completeness_check": "all cases have 5 expected files"
+      },
+      {
+        "synapse_file": "BraTS2024-BraTS-GLI-AdditionalTrainingData.zip",
+        "synapse_id": "syn64314352",
+        "local_path": "/Volumes/External M2/Datos/TFM-datasets/training_data_additional",
+        "cases": 271,
+        "nifti_files": 1355,
+        "modalities": {
+          "seg": 271,
+          "t1c": 271,
+          "t1n": 271,
+          "t2f": 271,
+          "t2w": 271
+        },
+        "local_size_bytes": 5383272085,
+        "completeness_check": "all cases have 5 expected files"
+      },
+      {
+        "synapse_file": "BraTS2024-BraTS-GLI-ValidationData.zip",
+        "synapse_id": "syn61455507",
+        "local_path": "/Volumes/External M2/Datos/TFM-datasets/validation_data",
+        "cases": 188,
+        "nifti_files": 752,
+        "modalities": {
+          "t1c": 188,
+          "t1n": 188,
+          "t2f": 188,
+          "t2w": 188
+        },
+        "local_size_bytes": 5416660586,
+        "completeness_check": "all cases have 4 expected files"
+      },
+      {
+        "synapse_file": "BraTS2024-MEN-RT-TrainingData.zip",
+        "synapse_id": "syn60085033",
+        "local_path": "/Volumes/External M2/Datos/TFM-datasets/BraTS-MEN-RT-Train-v2",
+        "cases": 500,
+        "nifti_files": 1000,
+        "modalities": {
+          "gtv": 500,
+          "t1c": 500
+        },
+        "local_size_bytes": 11389837763,
+        "completeness_check": "all cases have 2 expected files"
+      },
+      {
+        "synapse_file": "BraTS2024-MEN-RT-ValidationData.zip",
+        "synapse_id": "syn61484746",
+        "local_path": "/Volumes/External M2/Datos/TFM-datasets/BraTS-MEN-RT-Val-v1",
+        "cases": 70,
+        "nifti_files": 70,
+        "modalities": {
+          "t1c": 70
+        },
+        "local_size_bytes": 1642002226,
+        "completeness_check": "all cases have 1 expected file"
+      }
+    ],
+    "small_file_match": {
+      "local_path": "/Volumes/External M2/Datos/TFM-datasets/TMF-dataset-small-files",
+      "synapse_rows_matched_by_md5": 19,
+      "local_files_excluding_manifest": 14,
+      "manifest": "/Volumes/External M2/Datos/TFM-datasets/TMF-dataset-small-files/manifest.csv",
+      "note": "Some Synapse files share identical MD5 hashes and are represented by one local copy or renamed duplicate downloads."
+    }
+  },
+  "notes": [
+    "Per-file byte sizes and file handles were not included because content-level file handle access was blocked until Synapse access requirements are met.",
+    "The source wiki repeats two post-challenge notes about manuscript citation and MLPerf usage; they are represented once here.",
+    "Local dataset matching intentionally excluded the _comprimidos folder."
+  ]
+}
