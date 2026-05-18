@@ -48,3 +48,11 @@ La segmentación precisa de gliomas en imágenes de resonancia magnética (MRI) 
 ## Contribución Innovadora (Justificación Q1)
 
 Módulo de fusión adaptativa de modalidades MRI que aprende a ponderar dinámicamente T1, T1ce, T2 y FLAIR según la región tumoral que se está segmentando, combinado con aprendizaje contrastivo inter-modal que mejora la representación de bordes tumorales difusos y evaluado con protocolo cross-institutional.
+
+## Acotacion tras revision con tutor (2026-05-18)
+
+- El alcance clinico y experimental se cierra sobre BraTS-GLI 2024. Otros subconjuntos BraTS quedan como contexto, limitaciones o trabajo futuro.
+- La contribucion defendible se acota a fusion adaptativa de modalidades MRI, comparada contra concatenacion estandar y fusion ponderada.
+- El aprendizaje contrastivo inter-modal y la evaluacion cross-institutional dejan de ser nucleo experimental y quedan como extensiones opcionales o trabajo futuro.
+- La pregunta de investigacion aprobada es: puede una estrategia de fusion adaptativa de modalidades MRI mejorar la segmentacion 3D de gliomas en BraTS-GLI frente a una fusion por concatenacion estandar, manteniendo un coste computacional asumible y con mejoras consistentes en ET, TC y WT?
+- El criterio de exito objetivo es: baseline fuerte + modelo Transformer-UNet + ablacion de fusion de modalidades.

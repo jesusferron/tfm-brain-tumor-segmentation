@@ -1,210 +1,172 @@
-# Temas iniciales para revisar con el tutor del TFM
+# Temas revisados con el tutor del TFM
 
 Fecha de preparacion: 2026-05-13
+Fecha de revision con tutor: 2026-05-18
+
+Estado: documento actualizado tras la revision con el tutor. Las decisiones vigentes estan consolidadas en `docs/pre-design/decisiones-iniciales.md` y la trazabilidad detallada de las respuestas se mantiene en `docs/pre-design/respuestas-tutor-2026-05-18.md`.
 
 ## Contexto analizado
 
-El proyecto parte de una propuesta de TFM sobre segmentacion de tumores cerebrales en resonancia magnetica multimodal usando BraTS 2024, con foco inicial en arquitecturas hibridas Transformer-UNet y una posible contribucion basada en fusion adaptativa de modalidades MRI y aprendizaje contrastivo inter-modal.
+El proyecto parte de una propuesta de TFM sobre segmentacion de tumores cerebrales en resonancia magnetica multimodal usando BraTS 2024, con foco en arquitecturas hibridas Transformer-UNet y una contribucion basada en fusion adaptativa de modalidades MRI.
 
 La evidencia local disponible indica que el repositorio esta todavia en fase de pre-diseno: contiene documentacion de propuesta, glosario, inventario de ficheros BraTS 2024 y verificacion de correspondencia con el dataset local, pero aun no contiene codigo de preprocesamiento, entrenamiento, evaluacion ni experimentos.
-
-## Decisiones ya tomadas
-
-Estas decisiones se registran con mas detalle en `docs/pre-design/decisiones-iniciales.md`.
-
-- El TFM se centrara en BraTS-GLI 2024.
-- Se intentara trabajar con los 5 modelos completos de la propuesta inicial.
-- TransBTS se mantiene en alcance aunque su implementacion consuma tiempo.
-- Se usaran Google Colab Pro y un Mac M4 Pro como recursos de computo.
-- El repositorio actual sera la entrega del TFM.
-- El analisis del dataset y de sus caracteristicas formara parte explicita del TFM.
-- La memoria citara BraTS de forma obligatoria y respetara la licencia CC-BY-NC 4.0.
-- Se recomienda adoptar reproducibilidad practica auditada: splits, seeds, configs, versiones, logs y manifiestos de experimento.
 
 ## Estado actual del material
 
 - Propuesta base: segmentacion de gliomas en MRI multimodal con comparacion entre Swin-UNETR, nnU-Net, Attention U-Net, TransBTS y 3D U-Net residual.
-- Dataset principal sugerido: BraTS-GLI 2024.
+- Dataset principal: BraTS-GLI 2024.
 - Datos locales disponibles para BraTS-GLI:
   - Entrenamiento principal: 1350 casos, con `seg`, `t1c`, `t1n`, `t2f`, `t2w`.
   - Entrenamiento adicional: 271 casos, con las mismas 5 modalidades.
   - Validacion publica: 188 casos, con `t1c`, `t1n`, `t2f`, `t2w` y sin mascara `seg` publica.
-- Datos locales adicionales: BraTS-MEN-RT con 500 casos de entrenamiento `t1c` + `gtv` y 70 casos de validacion `t1c`, aunque este subconjunto no encaja directamente con el objetivo principal de gliomas multimodales.
-- Restricciones ya documentadas: licencia CC-BY-NC 4.0, uso no comercial, citacion obligatoria de BraTS/Synapse y referencias especificas por coleccion.
+- Datos locales adicionales: BraTS-MEN-RT con 500 casos de entrenamiento `t1c` + `gtv` y 70 casos de validacion `t1c`. Este subconjunto no forma parte del nucleo experimental porque representa otra tarea clinica y otro esquema de etiquetas.
+- Restricciones documentadas: licencia CC-BY-NC 4.0, uso no comercial, citacion obligatoria de BraTS/Synapse y no redistribucion de datos NIfTI.
 
-## Propuesta de agenda para la primera reunion
+## Decisiones tras la revision
 
-### 1. Cerrar el alcance clinico y experimental
+### 1. Alcance clinico y experimental
 
-Decision actual: el TFM se centrara en BraTS-GLI 2024.
+Decision: cerrar el alcance clinico y experimental sobre BraTS-GLI 2024.
 
-Justificacion: BraTS-GLI es el subconjunto que encaja directamente con segmentacion de gliomas en MRI multimodal, contiene las cuatro modalidades relevantes y dispone localmente de casos con mascara `seg` para entrenamiento y evaluacion interna. Otros subconjuntos de BraTS 2024 representan tareas clinicas y etiquetas distintas, por lo que mezclarlos desde el inicio diluiria el diseno experimental.
+Justificacion: BraTS-GLI es el subconjunto que encaja directamente con segmentacion de gliomas en MRI multimodal, contiene las cuatro modalidades relevantes y dispone localmente de 1621 casos con mascara `seg` para entrenamiento y evaluacion interna.
 
-Preguntas para el tutor:
+Otros subconjuntos BraTS se dejaran como contexto, limitaciones o trabajo futuro. La razon debe explicarse en la memoria: tienen tareas clinicas, modalidades, etiquetas o protocolos distintos, por lo que mezclarlos en el nucleo experimental diluiria la comparabilidad.
 
-- Validar que BraTS-GLI sea el unico dataset principal.
-- Confirmar si otros subconjuntos deben aparecer solo como contexto/trabajo futuro.
-- Que nivel de profundidad clinica se espera: segmentacion tecnica, utilidad clinica o ambas?
+### 2. Numero de modelos
 
-Decision operativa: dejar otros subconjuntos como trabajo futuro o analisis de generalizacion solo si se confirma disponibilidad de etiquetas y el diseno principal queda estabilizado.
+Decision: mantener los 5 modelos al final, pero con roles experimentales claros y ejecucion por fases.
 
-### 2. Replantear el numero de modelos
+Modelos previstos:
 
-Decision actual: se intentara trabajar con los 5 modelos completos de la propuesta inicial.
+- 3D U-Net con bloques residuales: baseline convolucional controlado.
+- Attention U-Net: variante intermedia para medir el efecto de atencion espacial.
+- nnU-Net: baseline fuerte principal.
+- Swin-UNETR: modelo Transformer-UNet alineado con el titulo del TFM.
+- TransBTS: arquitectura hibrida especifica para segmentacion de tumores cerebrales.
 
-Riesgo a revisar con el tutor: entrenar y evaluar correctamente cinco arquitecturas 3D puede ser costoso. La decision se mantiene porque no hay una restriccion fuerte de calendario, pero conviene ordenar los experimentos por fases y definir criterios de parada.
+Justificacion: los cinco modelos cubren una progresion defendible desde baseline propio hasta baseline fuerte y modelos hibridos/Transformer. El riesgo computacional se controla ejecutando primero pipeline, splits y baseline sencillo, despues nnU-Net/Swin-UNETR y finalmente Attention U-Net/TransBTS si no bloquean el avance.
 
-Preguntas para el tutor:
+### 3. Contribucion defendible y acotada
 
-- Validar que comparar los 5 modelos completos es adecuado para el TFM.
-- Confirmar nnU-Net como baseline fuerte principal.
-- Confirmar Swin-UNETR como modelo avanzado de referencia.
-- Confirmar el orden de ejecucion experimental para reducir riesgo.
+Decision: la contribucion principal sera una estrategia de fusion adaptativa de modalidades MRI.
 
-Recomendacion actualizada: mantener los 5 modelos, pero con roles claros: 3D U-Net residual como baseline controlado, Attention U-Net como mejora atencional intermedia, nnU-Net como baseline fuerte principal, Swin-UNETR como referencia Transformer-UNet y TransBTS como arquitectura hibrida especifica de tumores cerebrales.
+Comparadores minimos:
 
-### 3. Definir una contribucion defendible y acotada
+- Concatenacion estandar de modalidades.
+- Fusion ponderada para comparar pesos/valores de modalidades.
+- Fusion adaptativa como propuesta principal.
 
-La idea de fusion adaptativa de modalidades y aprendizaje contrastivo inter-modal es interesante, pero puede abrir demasiado el alcance si se implementan ambas de forma completa.
+La idea de que una red neuronal genere pesos de fusion queda como cuestion tecnica pendiente. Debe distinguirse entre dos posibilidades:
 
-Preguntas para el tutor:
+- Fusion de modalidades: pesos aplicados a `t1n`, `t1c`, `t2w`, `t2f` dentro del modelo.
+- Fusion de salidas/modelos: pesos aplicados a predicciones de distintos modelos, mas cercano a un ensemble.
 
-- Que contribucion es mas defendible para el TFM: fusion adaptativa, aprendizaje contrastivo o ambas?
-- La contribucion debe ser arquitectonica, metodologica o principalmente experimental?
-- Se valora mas superar ligeramente un baseline o demostrar con ablaciones que el modulo aporta robustez?
-- Hace falta apuntar a una contribucion tipo Q1 o basta con un trabajo academico solido y reproducible?
+El aprendizaje contrastivo inter-modal deja de ser nucleo del TFM y queda como extension opcional o trabajo futuro.
 
-Recomendacion inicial: priorizar fusion adaptativa de modalidades como contribucion principal, porque conecta directamente con MRI multimodal y permite hacer ablaciones claras por modalidad. Tratar el aprendizaje contrastivo como extension opcional si el baseline y la pipeline estan estabilizados.
+### 4. Protocolo de evaluacion
 
-### 4. Fijar protocolo de evaluacion antes de entrenar
+Decision: fijar el protocolo de evaluacion antes de entrenar.
 
-El dataset de validacion BraTS-GLI local no contiene mascaras publicas, asi que no sirve directamente para calcular Dice o HD95 localmente salvo mediante plataforma oficial/evaluador externo. Hay que definir un split interno reproducible a partir de los 1350 + 271 casos con `seg`.
+Protocolo aprobado:
 
-Preguntas para el tutor:
+- Crear un split interno estratificado y reproducible sobre los 1621 casos con mascara.
+- Reservar un hold-out final no tocado.
+- Versionar IDs de train/validation/test y semilla de generacion.
+- Reportar como minimo Dice y HD95 para ET, TC y WT.
+- No tratar la validacion publica BraTS-GLI como test local medible si no hay mascaras o evaluador oficial disponible.
 
-- Que particion se aprueba para train/validation/test interno?
-- Se debe usar el additional training data dentro del entrenamiento, como test interno separado o como validacion externa?
-- Debemos reservar un test hold-out fijo antes de cualquier ajuste?
-- Que metricas son obligatorias: Dice, HD95, sensibilidad, precision, volumen tumoral, calibracion?
-- Las metricas deben reportarse para ET, TC y WT siguiendo BraTS?
+Justificacion de metricas: Dice mide solapamiento volumetrico y HD95 mide error de frontera reduciendo la sensibilidad a outliers extremos. ET, TC y WT son las regiones BraTS estandar y permiten comparar comportamiento en tumor realzante, nucleo tumoral y tumor completo.
 
-Recomendacion inicial: crear un split interno estratificado y reproducible sobre los 1621 casos con mascara, reservar un hold-out final no tocado, y reportar Dice + HD95 para ET, TC y WT como minimo.
+Pendiente operativo: definir porcentaje exacto train/validation/test y variables de estratificacion.
 
-### 5. Validar viabilidad computacional
+### 5. Viabilidad computacional
 
-Decision actual: se usaran Google Colab Pro y un Mac M4 Pro, sin limite estricto de tiempo.
+Decision: disenar la pipeline con entrenamiento por patches 3D, configuraciones versionadas y experimentos escalables.
 
-Los modelos 3D con volumes BraTS completos pueden exigir mucha VRAM y tiempo. Con los recursos disponibles, el planteamiento es viable si se usa Colab Pro para entrenamientos principales y el Mac para analisis, preparacion de datos y pruebas pequenas.
+Secuencia de ejecucion:
 
-Preguntas para el tutor:
+1. Smoke tests en Mac o Colab para validar carga de datos, transforms, forward/backward y metricas.
+2. Entrenamiento en subset pequeno para estimar memoria, tiempo y estabilidad.
+3. Entrenamiento completo en Colab Pro con GPU.
 
-- Se permite entrenar con patches 3D en lugar de volumen completo?
-- El tutor prefiere algun formato concreto para registrar experimentos y resultados?
-- Hay expectativas sobre checkpoints, logs o trazabilidad de ejecuciones?
+Cada experimento debe registrar configuracion, semilla, entorno, logs, checkpoints relevantes y metricas agregadas.
 
-Recomendacion actualizada: disenar la pipeline con entrenamiento por patches 3D, configuraciones versionadas y experimentos escalables: primero smoke tests en Mac o Colab, luego subset pequeno y finalmente entrenamiento completo en Colab Pro.
+### 6. Framework tecnico
 
-### 6. Acordar framework tecnico
+Decision: MONAI/PyTorch queda aprobado como base tecnica.
 
-Decision actual: el repositorio actual sera la entrega del TFM.
+nnU-Net se mantiene como baseline fuerte. El tutor sugiere estudiar si puede integrarse dentro del flujo MONAI al ser open source. Si la integracion no es razonable, se mantendra como baseline externo reproducible, documentando version, conversion de datos, comandos, folds, rutas y resultados.
 
-El repositorio aun no contiene codigo. Conviene construir una base tecnica reproducible y compatible con Colab Pro/Mac M4 Pro.
+Pendiente tecnico: evaluar la viabilidad real de integrar nnU-Net dentro del flujo MONAI sin convertirlo en un desvio de alcance.
 
-Preguntas para el tutor:
+### 7. Preprocesamiento minimo obligatorio
 
-- Se prefiere MONAI por su soporte de imagen medica y modelos como Swin-UNETR?
-- Se permite usar nnU-Net como herramienta externa de baseline aunque tenga su propia estructura?
-- El tutor acepta una entrega donde nnU-Net no este copiado dentro del repo, pero si documentado y ejecutado mediante scripts/configuracion propia?
-- Que nivel de reproducibilidad ejecutable considera suficiente?
+Decision: documentar el preprocesamiento oficial asumido de BraTS-GLI e implementar controles automaticos antes de entrenar.
 
-Recomendacion actualizada: usar MONAI/PyTorch para la pipeline propia y nnU-Net como baseline externo documentado, manteniendo conversiones, configuraciones, splits, comandos, logs y resultados dentro del repositorio.
+Minimos obligatorios:
 
-### 7. Definir preprocesamiento minimo obligatorio
+- Verificar presencia de modalidades y mascara cuando aplique.
+- Verificar compatibilidad de shape y affine entre modalidades y mascara.
+- Aplicar normalizacion z-score por modalidad en voxeles no cero.
+- Calcular estadisticas descriptivas por region tumoral.
+- Registrar casos atipicos o potencialmente problematicos.
 
-Decision actual: el analisis del dataset y de sus caracteristicas sera parte explicita del TFM.
+### 8. Pregunta de investigacion
 
-BraTS suele venir registrado y normalizado espacialmente, pero el TFM debe documentar y verificar el flujo real antes de entrenar.
+Decision: la formulacion propuesta queda aprobada.
 
-Preguntas para el tutor:
-
-- Podemos asumir que BraTS-GLI ya esta co-registrado, remuestreado y con skull-stripping segun el challenge?
-- Que normalizacion de intensidad se espera: z-score por modalidad y caso, percentiles, normalizacion solo en region no cero?
-- Se exige revision visual o control de calidad automatico de casos?
-- Que estadisticas descriptivas de volumen tumoral y etiquetas considera prioritarias?
-
-Recomendacion actualizada: documentar el preprocesamiento oficial asumido, implementar verificaciones automaticas de presencia de modalidades/mascara, shape/affine compatibles, normalizacion z-score por modalidad en voxeles no cero y estadisticas descriptivas por region tumoral.
-
-### 8. Concretar la pregunta de investigacion
-
-La propuesta actual es amplia. Para orientar memoria, experimentos y defensa, conviene formular una pregunta principal medible.
-
-Preguntas para el tutor:
-
-- La pregunta debe formularse como mejora de precision, robustez o interpretabilidad?
-- El modulo de fusion debe evaluarse contra concatenacion simple de modalidades?
-- Tiene interes analizar rendimiento cuando falta una modalidad o cuando se degrada una modalidad?
-
-Propuesta de formulacion inicial:
+Pregunta:
 
 > Puede una estrategia de fusion adaptativa de modalidades MRI mejorar la segmentacion 3D de gliomas en BraTS-GLI frente a una fusion por concatenacion estandar, manteniendo un coste computacional asumible y con mejoras consistentes en ET, TC y WT?
 
-### 9. Establecer criterios de exito del TFM
+Esta pregunta debe orientar memoria, experimentos, ablation studies y defensa.
 
-Conviene pactar con el tutor que se considerara un resultado satisfactorio aunque no se supere el estado del arte.
+### 9. Criterios de exito
 
-Preguntas para el tutor:
+Decision: el objetivo defendible del TFM es baseline fuerte + modelo Transformer-UNet + ablacion de fusion de modalidades.
 
-- Cual es el minimo entregable aceptable: pipeline reproducible + baseline, comparativa, o modulo nuevo con ablaciones?
-- Que resultados numericos se consideran suficientes?
-- Se valorara negativamente si el modulo nuevo no supera a nnU-Net pero esta bien analizado?
-- Que peso tendran metodologia, reproducibilidad y analisis critico frente a metrica final?
-
-Recomendacion inicial: fijar tres niveles de exito:
+Niveles de exito:
 
 - Minimo: pipeline reproducible con baseline 3D y evaluacion interna BraTS-GLI.
 - Objetivo: baseline fuerte + modelo Transformer-UNet + ablacion de fusion de modalidades.
-- Ambicioso: robustez ante modalidades degradadas/faltantes o evaluacion externa.
+- Ambicioso: robustez ante modalidades degradadas/faltantes o fusion neuronal de salidas/modelos, solo si el nucleo experimental queda estabilizado.
 
-### 10. Revisar implicaciones legales, citacion y publicacion
+### 10. Legal, citacion y publicacion
 
-Decision actual: BraTS se citara obligatoriamente en la memoria.
+Decision: mantener el repositorio privado hasta la entrega del TFM.
 
-El dataset tiene licencia no comercial y requisitos de citacion. Esto no bloquea un TFM, pero debe quedar claro en memoria y repositorio.
+Implicaciones:
 
-Preguntas para el tutor:
+- Incluir apartado especifico de licencia, citacion y uso de datos.
+- No propagar ni redistribuir los datos NIfTI.
+- Mencionar la fuente oficial y requisitos de acceso.
+- Versionar codigo, configuraciones, scripts, resultados agregados y splits solo si su publicacion respeta las condiciones del dataset.
 
-- El codigo del repositorio sera publico o privado?
-- Se pueden publicar scripts, splits y resultados sin redistribuir datos?
-- Hay que incluir una seccion especifica de licencia y uso de datos?
+## Pendientes tecnicos
 
-Recomendacion inicial: mantener el repositorio sin datos NIfTI, documentar rutas locales y requisitos de acceso, y versionar solo scripts, configs, splits anonimizados por ID de caso si la licencia lo permite, y resultados agregados.
-
-## Decisiones que conviene cerrar en la reunion
-
-| Decision | Opcion recomendada para arrancar | Riesgo si no se decide |
+| Pendiente | Decision necesaria | Momento recomendado |
 | --- | --- | --- |
-| Dataset principal | BraTS-GLI 2024 | Alcance disperso entre tumores y modalidades |
-| Subconjuntos adicionales | Solo contexto/trabajo futuro inicialmente | Sobrecarga experimental |
-| Modelos experimentales | Intentar los 5 modelos completos por fases | Comparativa demasiado extensa |
-| Contribucion principal | Fusion adaptativa de modalidades | Innovacion dificil de evaluar |
-| Aprendizaje contrastivo | Extension opcional | Complejidad alta sin garantia de mejora |
-| Evaluacion | Split interno con hold-out + Dice/HD95 ET, TC, WT | Resultados no reproducibles o no comparables |
-| Framework | MONAI/PyTorch + nnU-Net baseline | Reimplementacion innecesaria |
-| Validacion publica BraTS | Usarla solo si hay evaluador/labels disponibles | Confundir validacion sin mascaras con test medible |
-| Generalizacion externa | Opcional, no core del TFM | Dependencia de datos/labels no confirmados |
+| Split interno | Porcentaje train/validation/test y variables de estratificacion | Antes de cualquier entrenamiento |
+| Fusion ponderada | Pesos por modalidad, por region tumoral o por salida de modelo | Antes de implementar ablaciones |
+| Fusion neuronal | Ablacion avanzada o trabajo futuro | Tras baseline y fusion adaptativa minima |
+| nnU-Net + MONAI | Integracion tecnica o baseline externo documentado | Antes del primer baseline fuerte |
+| Validacion publica BraTS | Uso solo con evaluador oficial o etiquetas disponibles | Antes de reportar resultados finales |
 
-## Propuesta de proximos entregables
+## Proximos entregables
 
-1. Documento de alcance aprobado por el tutor con pregunta de investigacion, datasets, modelos y metricas.
+1. Documento de alcance final con pregunta de investigacion, dataset, modelos, metricas y criterios de exito.
 2. Script de inventario tecnico de casos BraTS-GLI: modalidades, shapes, affines, etiquetas presentes y estadisticas basicas.
-3. Generador de splits reproducibles train/val/test interno.
-4. Pipeline minima MONAI para cargar un caso, aplicar transformaciones y entrenar un baseline en subset pequeno.
-5. Primer baseline medible antes de implementar la contribucion.
-6. Diseno de ablaciones: concatenacion estandar frente a fusion adaptativa, y posiblemente robustez ante modalidad faltante/degradada.
+3. Generador de splits reproducibles train/validation/test con hold-out final.
+4. Pipeline minima MONAI con carga de caso, transforms, patches 3D y smoke test.
+5. Primer baseline medible en subset pequeno.
+6. Diseno experimental de ablaciones: concatenacion estandar, fusion ponderada y fusion adaptativa.
+7. Evaluacion tecnica de viabilidad para integrar nnU-Net dentro del flujo MONAI.
 
-## Material del repositorio usado para esta propuesta
+## Material del repositorio usado
 
 - `docs/specs/propuesta-2-segmentacion-tumores-cerebrales.md`
+- `docs/pre-design/decisiones-iniciales.md`
+- `docs/pre-design/respuestas-tutor-2026-05-18.md`
 - `data/brats_2024_dataset_context.md`
 - `data/brats_2024_dataset_properties.json`
 - `data/brats_2024_file_inventory.csv`
