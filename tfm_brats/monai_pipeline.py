@@ -228,65 +228,101 @@ def _autocast_context(device: Any, enabled: bool):
 def build_model(model_config: dict[str, Any]):
     import torch
     from torch import nn
-    from monai.networks.nets import UNet
-
-    class GlobalWeightedFusion(nn.Module):
-        def __init__(self, channels: int) -> None:
-            super().__init__()
-            self.logits = nn.Parameter(torch.zeros(channels))
-
-        def forward(self, x):
-            weights = torch.softmax(self.logits, dim=0).view(1, -1, 1, 1, 1)
-            return x * weights * x.shape[1]
-
-    class AdaptiveGatingFusion(nn.Module):
-        def __init__(self, channels: int, hidden: int = 8) -> None:
-            super().__init__()
-            self.gate = nn.Sequential(
-                nn.Linear(channels, hidden),
-                nn.ReLU(inplace=True),
-                nn.Linear(hidden, channels),
-            )
-
-        def forward(self, x):
-            pooled = x.mean(dim=(2, 3, 4))
-            weights = torch.softmax(self.gate(pooled), dim=1).view(x.shape[0], -1, 1, 1, 1)
-            return x * weights * x.shape[1]
-
-    class FusionUNet(nn.Module):
-        def __init__(self, fusion: nn.Module, unet: nn.Module) -> None:
-            super().__init__()
-            self.fusion = fusion
-            self.unet = unet
-
-        def forward(self, x):
-            return self.unet(self.fusion(x))
 
     in_channels = int(model_config.get("in_channels", 4))
     out_channels = int(model_config.get("out_channels", 3))
-    channels = tuple(int(value) for value in model_config.get("channels", [16, 32, 64, 128]))
-    strides = tuple(int(value) for value in model_config.get("strides", [2, 2, 2]))
-    num_res_units = int(model_config.get("num_res_units", 2))
-    fusion_name = str(model_config.get("fusion", "concat"))
+    architecture = str(model_config.get("architecture", "residual_unet_3d")).lower()
 
-    if fusion_name == "concat":
-        fusion = nn.Identity()
-    elif fusion_name == "global_weighted":
-        fusion = GlobalWeightedFusion(in_channels)
-    elif fusion_name == "adaptive_gating":
-        fusion = AdaptiveGatingFusion(in_channels, hidden=int(model_config.get("fusion_hidden", 8)))
-    else:
-        raise ValueError(f"Unsupported fusion mode: {fusion_name}")
+    if architecture in ("residual_unet_3d", "fusion_unet"):
+        from monai.networks.nets import UNet
 
-    unet = UNet(
-        spatial_dims=3,
-        in_channels=in_channels,
-        out_channels=out_channels,
-        channels=channels,
-        strides=strides,
-        num_res_units=num_res_units,
-    )
-    return FusionUNet(fusion=fusion, unet=unet)
+        class GlobalWeightedFusion(nn.Module):
+            def __init__(self, channels: int) -> None:
+                super().__init__()
+                self.logits = nn.Parameter(torch.zeros(channels))
+
+            def forward(self, x):
+                weights = torch.softmax(self.logits, dim=0).view(1, -1, 1, 1, 1)
+                return x * weights * x.shape[1]
+
+        class AdaptiveGatingFusion(nn.Module):
+            def __init__(self, channels: int, hidden: int = 8) -> None:
+                super().__init__()
+                self.gate = nn.Sequential(
+                    nn.Linear(channels, hidden),
+                    nn.ReLU(inplace=True),
+                    nn.Linear(hidden, channels),
+                )
+
+            def forward(self, x):
+                pooled = x.mean(dim=(2, 3, 4))
+                weights = torch.softmax(self.gate(pooled), dim=1).view(x.shape[0], -1, 1, 1, 1)
+                return x * weights * x.shape[1]
+
+        class FusionUNet(nn.Module):
+            def __init__(self, fusion: nn.Module, unet: nn.Module) -> None:
+                super().__init__()
+                self.fusion = fusion
+                self.unet = unet
+
+            def forward(self, x):
+                return self.unet(self.fusion(x))
+
+        channels = tuple(int(value) for value in model_config.get("channels", [16, 32, 64, 128]))
+        strides = tuple(int(value) for value in model_config.get("strides", [2, 2, 2]))
+        num_res_units = int(model_config.get("num_res_units", 2))
+        fusion_name = str(model_config.get("fusion", "concat"))
+
+        if fusion_name == "concat":
+            fusion = nn.Identity()
+        elif fusion_name == "global_weighted":
+            fusion = GlobalWeightedFusion(in_channels)
+        elif fusion_name == "adaptive_gating":
+            fusion = AdaptiveGatingFusion(in_channels, hidden=int(model_config.get("fusion_hidden", 8)))
+        else:
+            raise ValueError(f"Unsupported fusion mode: {fusion_name}")
+
+        unet = UNet(
+            spatial_dims=3,
+            in_channels=in_channels,
+            out_channels=out_channels,
+            channels=channels,
+            strides=strides,
+            num_res_units=num_res_units,
+        )
+        return FusionUNet(fusion=fusion, unet=unet)
+
+    if architecture == "swin_unetr":
+        from monai.networks.nets import SwinUNETR
+
+        return SwinUNETR(
+            in_channels=in_channels,
+            out_channels=out_channels,
+            feature_size=int(model_config.get("feature_size", 48)),
+            depths=tuple(int(value) for value in model_config.get("depths", [2, 2, 2, 2])),
+            num_heads=tuple(int(value) for value in model_config.get("num_heads", [3, 6, 12, 24])),
+            drop_rate=float(model_config.get("drop_rate", 0.0)),
+            attn_drop_rate=float(model_config.get("attn_drop_rate", 0.0)),
+            dropout_path_rate=float(model_config.get("dropout_path_rate", 0.0)),
+            use_checkpoint=bool(model_config.get("use_checkpoint", False)),
+            use_v2=bool(model_config.get("use_v2", False)),
+        )
+
+    if architecture == "attention_unet":
+        from monai.networks.nets import AttentionUnet
+
+        return AttentionUnet(
+            spatial_dims=3,
+            in_channels=in_channels,
+            out_channels=out_channels,
+            channels=tuple(int(value) for value in model_config.get("channels", [16, 32, 64, 128, 256])),
+            strides=tuple(int(value) for value in model_config.get("strides", [2, 2, 2, 2])),
+            kernel_size=int(model_config.get("kernel_size", 3)),
+            up_kernel_size=int(model_config.get("up_kernel_size", 3)),
+            dropout=float(model_config.get("dropout", 0.0)),
+        )
+
+    raise ValueError(f"Unsupported architecture: {architecture}")
 
 
 def _batch_region_dice(logits: Any, labels: Any) -> dict[str, float]:

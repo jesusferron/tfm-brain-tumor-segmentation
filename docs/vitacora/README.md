@@ -1,6 +1,6 @@
 # Bitacora metodologica del TFM
 
-Ultima actualizacion: 2026-05-26
+Ultima actualizacion: 2026-05-26 (entrada vespertina: ampliacion del factory de modelos)
 
 Este documento registra, de forma incremental, la metodologia seguida durante el TFM. Su objetivo no es duplicar la memoria final, sino conservar la trazabilidad de lo que se decide, por que se decide, como se ejecuta y que evidencia queda disponible para justificarlo despues en el documento final.
 
@@ -437,3 +437,107 @@ Actualizacion posterior del mismo dia:
 - Se aumenta `samples_per_case` de 2 a 4 en `configs/training/colab_pro.yaml` para procesar mas patches por cada caso leido y amortizar mejor el I/O.
 - Se amplia el log de entrenamiento con `patches`, `data_wait_seconds`, `compute_seconds`, `step_seconds` y `patches_per_second`.
 - La siguiente decision dependera de esos tiempos: si domina `data_wait`, copiar dataset a `/content/TFM-datasets`; si domina `compute`, ajustar batch efectivo, `patch_size` o numero total de pasos.
+
+### 2026-05-26 - Ampliacion del catalogo de modelos: Swin-UNETR y Attention U-Net
+
+Actividad realizada: se identifica que la corrida actual en Colab Pro (`configs/model/residual_unet_3d.yaml`) solo entrena la primera fase del plan experimental (baseline `residual_unet_3d` con fusion `concat`), de las seis declaradas en `experiment_priority`. Para que la pipeline propia pueda cubrir tambien el modelo Transformer-UNet y la variante intermedia de atencion espacial, se generaliza el factory de modelos y se anaden las configuraciones de Swin-UNETR y Attention U-Net 3D.
+
+Objetivo metodologico: cerrar la brecha entre el plan experimental documentado y lo que el repositorio puede realmente entrenar, sin tocar la pipeline de datos, transforms, optimizador, perdida ni logging. La meta es que un mismo comando `python -m tfm_brats.cli train --model-config <ruta>` baste para entrenar cualquiera de las arquitecturas previstas, manteniendo splits, semilla, hold-out, AMP y registro de progreso identicos entre experimentos.
+
+Procedimiento seguido:
+
+- Se reviso el factory existente `tfm_brats.monai_pipeline.build_model`. Hasta ahora siempre instanciaba `monai.networks.nets.UNet` envuelto en `FusionUNet`, ignorando el campo `model.implementation` declarado en YAML. Por eso un `model-config` con otra arquitectura igualmente terminaba entrenando un U-Net residual.
+- Se introdujo un campo nuevo `model.architecture` y se refactorizo `build_model` como dispatcher explicito. Valores soportados: `residual_unet_3d` (alias `fusion_unet`, conserva la logica anterior y las tres fusiones `concat | global_weighted | adaptive_gating`), `swin_unetr` y `attention_unet`. Cualquier otro valor lanza `ValueError`, evitando que un YAML con un nombre inesperado entrene silenciosamente el baseline.
+- Se actualizaron los tres YAML existentes (`residual_unet_3d.yaml`, `residual_unet_3d_global_weighted.yaml`, `residual_unet_3d_adaptive_gating.yaml`) para declarar `architecture: residual_unet_3d` de forma explicita. El comportamiento no cambia, pero la configuracion ya no depende de un default implicito.
+- Se anadio `configs/model/swin_unetr.yaml` usando `monai.networks.nets.SwinUNETR` con `feature_size=48`, `depths=[2,2,2,2]`, `num_heads=[3,6,12,24]` y sin `use_checkpoint` (se puede activar despues si la memoria de la A100 lo exige).
+- Se anadio `configs/model/attention_unet_3d.yaml` usando `monai.networks.nets.AttentionUnet` con cinco niveles (`channels=[16,32,64,128,256]`, `strides=[2,2,2,2]`).
+- Verificacion local: `python -m compileall -q tfm_brats` correcto, `unittest discover -s tests` con 6 tests OK, y un smoke de forward con tensor `(1, 4, 96, 96, 96)` para las cinco configuraciones. Todas devuelven `(1, 3, 96, 96, 96)`. Conteo de parametros: residual U-Net 1.19M, Attention U-Net 5.91M, Swin-UNETR 62.19M.
+
+Justificacion metodologica:
+
+- El factory anterior solo soportaba una arquitectura. Introducir un dispatcher no anade un acoplamiento nuevo: simplemente hace explicito lo que ya estaba implicito y permite que el resto de la pipeline (transforms, dataloader, perdida `DiceCELoss`, validacion sliding window, checkpoints, logs) se reuse sin cambios entre modelos.
+- Mantener `residual_unet_3d` como default preserva la compatibilidad con cualquier YAML antiguo y con la entrada anterior de la bitacora.
+- Anadir `architecture` como campo separado de `name` permite distinguir la familia de modelos (lo que decide el factory) del nombre del experimento (lo que se usa para artefactos y reporting).
+- Las opciones de Swin-UNETR y Attention U-Net se exponen via YAML, sin valores hardcodeados, para poder ajustar `feature_size`, `depths`, `dropout`, etc., sin tocar codigo.
+
+Implicaciones para el plan experimental:
+
+- La fase 6 del plan (entrenamiento de baseline fuerte y modelo Transformer-UNet) ya es ejecutable desde la pipeline propia: `configs/model/swin_unetr.yaml` cubre la parte Transformer-UNet alineada con el titulo del TFM.
+- La fase 5 (Attention U-Net como variante intermedia) tambien queda cubierta con `configs/model/attention_unet_3d.yaml`.
+- La fase 7 (ablacion de fusiones) ya tenia configs (`residual_unet_3d_global_weighted.yaml`, `residual_unet_3d_adaptive_gating.yaml`) pero aun no se ha entrenado: queda explicitamente pendiente.
+- nnU-Net y TransBTS siguen sin estar implementados en la pipeline propia y se documentan como fases posteriores.
+- Una sola semilla por experimento sigue siendo el modo actual; la repeticion con semillas adicionales se decidira al consolidar resultados, no en esta entrada.
+
+Evidencia generada:
+
+- `tfm_brats/monai_pipeline.py` (funcion `build_model` extendida)
+- `configs/model/residual_unet_3d.yaml`
+- `configs/model/residual_unet_3d_global_weighted.yaml`
+- `configs/model/residual_unet_3d_adaptive_gating.yaml`
+- `configs/model/swin_unetr.yaml`
+- `configs/model/attention_unet_3d.yaml`
+
+Comandos previstos para Colab Pro tras esta entrada (manteniendo split, dataset y training config actuales):
+
+```bash
+python -m tfm_brats.cli train \
+  --dataset-config configs/dataset/brats_gli_2024.yaml \
+  --model-config configs/model/attention_unet_3d.yaml \
+  --training-config configs/training/colab_pro.yaml \
+  --split-dir outputs/splits/brats_gli_2024_seed20260526 \
+  --output-dir outputs/train/attention_unet_3d \
+  --max-steps 3000 \
+  --device cuda
+```
+
+```bash
+python -m tfm_brats.cli train \
+  --dataset-config configs/dataset/brats_gli_2024.yaml \
+  --model-config configs/model/swin_unetr.yaml \
+  --training-config configs/training/colab_pro.yaml \
+  --split-dir outputs/splits/brats_gli_2024_seed20260526 \
+  --output-dir outputs/train/swin_unetr \
+  --max-steps 3000 \
+  --device cuda
+```
+
+```bash
+python -m tfm_brats.cli train \
+  --dataset-config configs/dataset/brats_gli_2024.yaml \
+  --model-config configs/model/residual_unet_3d_global_weighted.yaml \
+  --training-config configs/training/colab_pro.yaml \
+  --split-dir outputs/splits/brats_gli_2024_seed20260526 \
+  --output-dir outputs/train/residual_unet_3d_global_weighted \
+  --max-steps 3000 \
+  --device cuda
+```
+
+```bash
+python -m tfm_brats.cli train \
+  --dataset-config configs/dataset/brats_gli_2024.yaml \
+  --model-config configs/model/residual_unet_3d_adaptive_gating.yaml \
+  --training-config configs/training/colab_pro.yaml \
+  --split-dir outputs/splits/brats_gli_2024_seed20260526 \
+  --output-dir outputs/train/residual_unet_3d_adaptive_gating \
+  --max-steps 3000 \
+  --device cuda
+```
+
+Riesgos y observaciones:
+
+- Swin-UNETR es notablemente mas pesado (62M parametros frente a 1.2M del baseline). Con `batch_size=2` y `patch_size=128` puede agotar la memoria de la A100. Si ocurre, la primera mitigacion sera activar `use_checkpoint: true` en `configs/model/swin_unetr.yaml` (gradient checkpointing del propio MONAI); la segunda, reducir `batch_size` a 1 o `patch_size` a 96 en el training config.
+- Attention U-Net 3D tiene un coste intermedio (5.9M) y deberia entrar con la misma `colab_pro.yaml` actual sin ajustes.
+- El comando documentado en la entrada anterior sigue siendo valido para la fase de baseline; las nuevas configuraciones no lo invalidan, solo extienden el catalogo.
+- Los `--max-steps 3000` heredados del baseline son insuficientes para sacar conclusiones experimentales finales, pero son adecuados para verificar que cada arquitectura entrena de forma estable, que se generan `train_summary.json`, `train_log.csv` y checkpoints, y para comparar tiempos por paso entre arquitecturas en la misma GPU.
+
+Impacto en la memoria final:
+
+Esta entrada justifica que la pipeline propia ya cubre tres familias de modelos (U-Net residual con tres fusiones, Attention U-Net y Swin-UNETR Transformer) bajo un protocolo comun. nnU-Net seguira presentandose como baseline fuerte externo y TransBTS como linea hibrida especializada cuya integracion queda como trabajo futuro si el presupuesto computacional lo permite. La memoria podra apoyarse en este registro para argumentar que la eleccion del subconjunto efectivo de modelos no es arbitraria, sino el resultado de priorizar la pregunta de investigacion (fusion adaptativa) y las capacidades reales del entorno de entrenamiento.
+
+Pendientes:
+
+- Entrenar `residual_unet_3d_global_weighted` y `residual_unet_3d_adaptive_gating` (fase 7) con el mismo protocolo que el baseline y consolidar tabla comparativa.
+- Entrenar `attention_unet_3d` (fase intermedia de atencion espacial) para evidenciar el escalon entre baseline puro y Transformer-UNet.
+- Entrenar `swin_unetr` (fase 6) y registrar memoria GPU pico, `step_seconds` y necesidad o no de `use_checkpoint`.
+- Confirmar si nnU-Net externo se ejecutara con `3d_fullres` y un fold, o con configuracion recomendada por nnU-Net, antes de cerrar la comparacion.
+- Decidir si se incorpora TransBTS o se documenta como trabajo futuro.

@@ -1,10 +1,10 @@
 # Ejecucion Del Baseline En Colab Pro
 
-Este documento describe como ejecutar el primer baseline real del TFM en Colab Pro: `residual_unet_3d` sobre BraTS-GLI 2024.
+Este documento describe como ejecutar el primer baseline real del TFM en Colab Pro: `residual_unet_3d` sobre BraTS-GLI 2024, y como reutilizar exactamente el mismo flujo para las demas arquitecturas del catalogo (`attention_unet_3d`, `swin_unetr`) y para las ablaciones de fusion (`residual_unet_3d_global_weighted`, `residual_unet_3d_adaptive_gating`).
 
 ## Objetivo
 
-Entrenar el baseline `residual_unet_3d`, generar predicciones sobre `val`, calcular metricas `Dice` y `HD95`, y traer de vuelta los artefactos minimos para analizar resultados.
+Entrenar el baseline `residual_unet_3d`, generar predicciones sobre `val`, calcular metricas `Dice` y `HD95`, y traer de vuelta los artefactos minimos para analizar resultados. Una vez validado el baseline, las mismas celdas sirven para entrenar el resto de configs cambiando `--model-config` y `--output-dir`.
 
 No uses el split `test` todavia. Primero validamos el baseline sobre `val`.
 
@@ -346,6 +346,26 @@ outputs/train/residual_unet_3d_colab_smoke/checkpoints/best.pt
 outputs/train/residual_unet_3d_colab_smoke/checkpoints/last.pt
 ```
 
+## 7b. Catalogo De Modelos Disponibles
+
+La pipeline propia (`tfm_brats.monai_pipeline.build_model`) selecciona la arquitectura segun el campo `model.architecture` del YAML. Todos los configs comparten el mismo `dataset-config`, `training-config` y `split-dir`. Solo cambia `--model-config` y `--output-dir`.
+
+| Config | Arquitectura | Parametros | Notas |
+| --- | --- | --- | --- |
+| `configs/model/residual_unet_3d.yaml` | `residual_unet_3d` (fusion `concat`) | ~1.2M | Baseline propio. |
+| `configs/model/residual_unet_3d_global_weighted.yaml` | `residual_unet_3d` (fusion `global_weighted`) | ~1.2M | Ablacion de fusion ponderada por modalidad. |
+| `configs/model/residual_unet_3d_adaptive_gating.yaml` | `residual_unet_3d` (fusion `adaptive_gating`) | ~1.2M | Ablacion de fusion adaptativa (contribucion principal). |
+| `configs/model/attention_unet_3d.yaml` | `attention_unet` | ~5.9M | Variante intermedia con attention gates en skip connections. |
+| `configs/model/swin_unetr.yaml` | `swin_unetr` | ~62M | Transformer-UNet alineado con el titulo del TFM. Mas pesado en memoria. |
+
+Todos producen logits de forma `(B, 3, D, H, W)` para las tres regiones BraTS (`ET`, `TC`, `WT`). El protocolo de entrenamiento, perdida (`DiceCELoss`), validacion sliding window y checkpointing es identico entre arquitecturas.
+
+Recomendaciones por arquitectura:
+
+- `attention_unet_3d`: cabe con la `colab_pro.yaml` actual (`batch_size=2`, `patch_size=128`) sin ajustes.
+- `swin_unetr`: 62M parametros. Si la A100 reporta OOM o memoria muy ajustada, activar `use_checkpoint: true` en `configs/model/swin_unetr.yaml`; si sigue sin caber, reducir `batch_size` a 1 o `patch_size` a `[96, 96, 96]` en el training config.
+- Ablaciones de fusion: mismo coste que el baseline, comparables en tiempo por paso.
+
 ## 8. Entrenamiento Real
 
 Si el smoke test funciona, lanza un primer entrenamiento acotado. Este perfil usa `amp`, mayor batch efectivo y validacion menos frecuente para aprovechar mejor A100.
@@ -498,9 +518,98 @@ Si quieres incluir el checkpoint:
   outputs/evaluation/residual_unet_3d_val_metrics_summary.json
 ```
 
+## 12b. Repetir El Flujo Para Otras Arquitecturas
+
+Cuando el baseline `residual_unet_3d` haya cerrado los pasos 7 a 11, puedes lanzar las demas arquitecturas reutilizando exactamente las mismas celdas. Solo cambian `--model-config` y `--output-dir`. El resto (dataset, training config, split, semilla, AMP, logging) se mantiene identico para que los experimentos sean comparables.
+
+Ejecutalas de una en una, no en paralelo, y al terminar cada una repite las secciones 10 (predict sobre `val`) y 11 (evaluate) apuntando a su propio `--output-dir`, `--checkpoint` y rutas de evaluacion.
+
+Attention U-Net 3D:
+
+```bash
+!python -m tfm_brats.cli train \
+  --dataset-config configs/dataset/brats_gli_2024.yaml \
+  --model-config configs/model/attention_unet_3d.yaml \
+  --training-config configs/training/colab_pro.yaml \
+  --split-dir outputs/splits/brats_gli_2024_seed20260526 \
+  --output-dir outputs/train/attention_unet_3d \
+  --max-steps 3000 \
+  --device cuda
+```
+
+Swin-UNETR (Transformer-UNet):
+
+```bash
+!python -m tfm_brats.cli train \
+  --dataset-config configs/dataset/brats_gli_2024.yaml \
+  --model-config configs/model/swin_unetr.yaml \
+  --training-config configs/training/colab_pro.yaml \
+  --split-dir outputs/splits/brats_gli_2024_seed20260526 \
+  --output-dir outputs/train/swin_unetr \
+  --max-steps 3000 \
+  --device cuda
+```
+
+Si Swin-UNETR da OOM, edita primero `configs/model/swin_unetr.yaml` y pon `use_checkpoint: true`. Si aun no cabe, baja `batch_size` en `configs/training/colab_pro.yaml` a 1 o usa `patch_size: [96, 96, 96]`.
+
+Ablacion de fusion ponderada:
+
+```bash
+!python -m tfm_brats.cli train \
+  --dataset-config configs/dataset/brats_gli_2024.yaml \
+  --model-config configs/model/residual_unet_3d_global_weighted.yaml \
+  --training-config configs/training/colab_pro.yaml \
+  --split-dir outputs/splits/brats_gli_2024_seed20260526 \
+  --output-dir outputs/train/residual_unet_3d_global_weighted \
+  --max-steps 3000 \
+  --device cuda
+```
+
+Ablacion de fusion adaptativa (contribucion principal):
+
+```bash
+!python -m tfm_brats.cli train \
+  --dataset-config configs/dataset/brats_gli_2024.yaml \
+  --model-config configs/model/residual_unet_3d_adaptive_gating.yaml \
+  --training-config configs/training/colab_pro.yaml \
+  --split-dir outputs/splits/brats_gli_2024_seed20260526 \
+  --output-dir outputs/train/residual_unet_3d_adaptive_gating \
+  --max-steps 3000 \
+  --device cuda
+```
+
+Para cada arquitectura, una vez completado el entrenamiento, ejecuta `predict` y `evaluate` igual que en las secciones 10 y 11 pero sustituyendo el nombre. Por ejemplo, para Attention U-Net:
+
+```bash
+!python -m tfm_brats.cli predict \
+  --dataset-config configs/dataset/brats_gli_2024.yaml \
+  --model-config configs/model/attention_unet_3d.yaml \
+  --training-config configs/training/colab_pro.yaml \
+  --split-csv outputs/splits/brats_gli_2024_seed20260526/val.csv \
+  --checkpoint outputs/train/attention_unet_3d/checkpoints/best.pt \
+  --output-dir outputs/predictions/attention_unet_3d_val \
+  --device cuda
+
+!python -m tfm_brats.cli evaluate \
+  --dataset-config configs/dataset/brats_gli_2024.yaml \
+  --split-csv outputs/splits/brats_gli_2024_seed20260526/val.csv \
+  --predictions-dir outputs/predictions/attention_unet_3d_val \
+  --output-csv outputs/evaluation/attention_unet_3d_val_metrics.csv \
+  --output-json outputs/evaluation/attention_unet_3d_val_metrics_summary.json
+```
+
+Mismos artefactos minimos esperados por experimento:
+
+```text
+outputs/train/<nombre>/train_summary.json
+outputs/train/<nombre>/train_log.csv
+outputs/train/<nombre>/checkpoints/best.pt
+outputs/evaluation/<nombre>_val_metrics_summary.json
+```
+
 ## 13. Informacion Que Debes Mandarme
 
-Cuando acabes, mandame:
+Cuando acabes el baseline, mandame:
 
 ```text
 GPU:
@@ -509,6 +618,20 @@ Existe best.pt: si/no
 Ultima linea relevante de train_log.csv:
 Contenido de train_summary.json:
 Contenido de residual_unet_3d_val_metrics_summary.json:
+```
+
+Si ademas has corrido otras arquitecturas, repite el mismo bloque por cada una sustituyendo el nombre. Por ejemplo, para Swin-UNETR mandame:
+
+```text
+GPU:
+Entrenamiento termino o se corto:
+Existe best.pt en outputs/train/swin_unetr/checkpoints: si/no
+GPU memory pico (de train_log.csv columna gpu_memory_gb):
+step_seconds tipico:
+Ultima linea relevante de train_log.csv:
+Contenido de train_summary.json:
+Contenido de swin_unetr_val_metrics_summary.json:
+Activaste use_checkpoint o ajustaste batch_size/patch_size: si/no y por que:
 ```
 
 No ejecutes evaluacion sobre `test` todavia. El split `test` se reserva para una evaluacion final cuando el baseline y las ablaciones esten decididos.
