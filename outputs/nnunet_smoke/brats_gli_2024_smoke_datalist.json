@@ -1,0 +1,24 @@
+{
+  "training": [
+    {
+      "case_id": "BraTS-GLI-02314-100",
+      "image": "outputs/nnunet_smoke/source/images/BraTS-GLI-02314-100.nii.gz",
+      "label": "outputs/nnunet_smoke/source/labels/BraTS-GLI-02314-100.nii.gz"
+    },
+    {
+      "case_id": "BraTS-GLI-02181-102",
+      "image": "outputs/nnunet_smoke/source/images/BraTS-GLI-02181-102.nii.gz",
+      "label": "outputs/nnunet_smoke/source/labels/BraTS-GLI-02181-102.nii.gz"
+    },
+    {
+      "case_id": "BraTS-GLI-00517-100",
+      "image": "outputs/nnunet_smoke/source/images/BraTS-GLI-00517-100.nii.gz",
+      "label": "outputs/nnunet_smoke/source/labels/BraTS-GLI-00517-100.nii.gz"
+    }
+  ],
+  "test": [
+    {
+      "image": "outputs/nnunet_smoke/source/images/BraTS-GLI-02314-100.nii.gz"
+    }
+  ]
+}

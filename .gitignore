@@ -1,0 +1,19 @@
+# Local medical imaging data and heavy generated artifacts.
+*.nii
+*.nii.gz
+
+# nnU-Net generated directories. Keep small smoke-test YAML/JSON files versionable.
+outputs/**/nnUNet_raw/
+outputs/**/nnUNet_preprocessed/
+outputs/**/nnUNet_results/
+
+# Training artifacts.
+outputs/**/checkpoints/
+outputs/**/*.ckpt
+outputs/**/*.pt
+outputs/**/*.pth
+
+# Python cache files.
+.venv/
+__pycache__/
+*.py[cod]

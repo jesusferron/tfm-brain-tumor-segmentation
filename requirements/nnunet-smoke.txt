@@ -1,0 +1,11 @@
+# Minimal top-level dependencies used for the MONAI/nnU-Net smoke test.
+# Install inside a virtual environment:
+#   python3 -m venv .venv
+#   .venv/bin/python -m pip install --upgrade pip setuptools wheel
+#   .venv/bin/python -m pip install -r requirements/nnunet-smoke.txt
+
+torch==2.12.0
+torchvision==0.27.0
+monai==1.5.2
+nnunetv2==2.7.0
+fire==0.7.1

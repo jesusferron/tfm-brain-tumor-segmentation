@@ -1,0 +1,20 @@
+# Repository-side smoke test settings for BraTS-GLI 2024 and MONAI nnUNetV2Runner.
+# This file is intentionally small: it validates a few cases and prepares a datalist,
+# but it does not run nnU-Net conversion, preprocessing or training.
+
+dataset_root: "/Volumes/External M2/Datos/TFM-datasets"
+training_roots:
+  - training_data1_v2
+  - training_data_additional
+modalities:
+  - t1n
+  - t1c
+  - t2w
+  - t2f
+label_suffix: seg
+sample_cases: 3
+stack_modalities: true
+stacked_source_output: "outputs/nnunet_smoke/source"
+datalist_output: "outputs/nnunet_smoke/brats_gli_2024_smoke_datalist.json"
+generated_monai_input_output: "outputs/nnunet_smoke/input.yaml"
+monai_template_input: "configs/nnunet/brats_gli_2024_monai_input.yaml"

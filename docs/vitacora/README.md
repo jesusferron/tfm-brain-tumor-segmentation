@@ -173,6 +173,162 @@ Impacto en la memoria final: nnU-Net se presentara como baseline fuerte externo 
 
 Pendientes:
 
-- Crear un `input.yaml` minimo para BraTS-GLI compatible con `nnUNetV2Runner`.
-- Probar conversion del dataset y verificacion de integridad.
+- Decidir si el baseline nnU-Net final usara los datos en formato NIfTI 4D intermedio o una conversion directa propia al formato nnU-Net.
 - Decidir si el baseline nnU-Net usara `3d_fullres` con un fold concreto, los 5 folds o la configuracion recomendada por nnU-Net segun presupuesto computacional.
+
+### 2026-05-18 - Smoke test minimo para preparar nnU-Net
+
+Actividad realizada: se prepara y ejecuta un smoke test local minimo para comprobar si el dataset BraTS-GLI puede alimentar una configuracion inicial de `nnUNetV2Runner` sin lanzar conversion, preprocesamiento ni entrenamiento.
+
+Objetivo metodologico: transformar la decision teorica sobre nnU-Net en un artefacto reproducible del repositorio. La prueba no busca medir rendimiento, sino confirmar que la estructura local de datos permite generar una entrada pequena y trazable para el siguiente paso de conversion.
+
+Procedimiento seguido:
+
+- Se comprueba que no queda activo ningun proceso largo relacionado con `find`, MONAI, nnU-Net o BraTS generado por el intento anterior.
+- Se confirma que el comando disponible en local es `python3`, no `python`.
+- Se crea una plantilla minima de entrada MONAI para nnU-Net.
+- Se crea una configuracion de smoke test limitada a 3 casos.
+- Se crea un script de validacion que inspecciona solo los primeros casos necesarios y verifica presencia de `t1n`, `t1c`, `t2w`, `t2f` y `seg`.
+- Se genera un datalist pequeno con 3 casos de entrenamiento y 1 caso de test sin etiqueta, porque nnU-Net gestiona validacion mediante folds internos y la interfaz de conversion de MONAI espera un elemento en `test` para completar la conversion.
+
+Artefactos generados:
+
+- `configs/nnunet/brats_gli_2024_monai_input.yaml`
+- `configs/nnunet/brats_gli_2024_smoke.yaml`
+- `scripts/nnunet/check_brats_gli_nnunet_smoke.py`
+- `outputs/nnunet_smoke/brats_gli_2024_smoke_datalist.json`
+- `outputs/nnunet_smoke/input.yaml`
+
+Resultado de ejecucion:
+
+- Python local: `3.13.2`.
+- MONAI instalado: no.
+- nnU-Net v2 instalado: no.
+- Raiz del dataset encontrada: `/Volumes/External M2/Datos/TFM-datasets`.
+- Carpetas de entrenamiento encontradas: `training_data1_v2` y `training_data_additional`.
+- Casos validos comprobados: 3.
+- Items de entrenamiento generados: 3.
+- Items de test generados: 1, sin etiqueta y solo para satisfacer el contrato de conversion de MONAI.
+- No se ejecuto conversion, preprocesamiento ni entrenamiento.
+
+Comando ejecutado:
+
+```bash
+python3 scripts/nnunet/check_brats_gli_nnunet_smoke.py
+```
+
+Comando preparado para el siguiente paso, cuando el entorno este listo:
+
+```bash
+.venv/bin/python -m monai.apps.nnunet nnUNetV2Runner convert_dataset --input_config outputs/nnunet_smoke/input.yaml
+```
+
+Explicacion para la memoria final: este paso documenta una verificacion preliminar de viabilidad tecnica. Antes de usar nnU-Net como baseline fuerte, se comprueba que las modalidades y mascaras de BraTS-GLI pueden representarse en un datalist compatible con el flujo MONAI/nnU-Net. Esta prueba reduce el riesgo de descubrir problemas de estructura de datos durante una conversion completa o durante entrenamiento.
+
+Pendientes:
+
+- Si la conversion funciona, ampliar el generador al split completo definido para el TFM.
+
+### 2026-05-18 - Conversion smoke test con nnUNetV2Runner
+
+Actividad realizada: se crea un entorno Python local aislado, se instalan las dependencias necesarias y se ejecuta la conversion minima de MONAI `nnUNetV2Runner convert_dataset` sobre 3 casos BraTS-GLI.
+
+Objetivo metodologico: verificar que nnU-Net puede ser orquestado desde MONAI con datos BraTS-GLI preparados desde el repositorio, antes de invertir tiempo en planificacion, preprocesamiento completo o entrenamiento.
+
+Entorno utilizado:
+
+- Python: `3.13.2`.
+- PyTorch: `2.12.0`.
+- MONAI: `1.5.2`.
+- nnU-Net v2: `2.7.0`.
+- `fire`: `0.7.1`, necesario para usar la CLI de `monai.apps.nnunet`.
+- Backend MPS disponible en el Mac: si.
+
+Artefactos anadidos:
+
+- `.venv/`, entorno local ignorado por Git.
+- `requirements/nnunet-smoke.txt`, dependencias minimas versionadas para repetir el smoke test.
+- `.gitignore`, reglas para evitar versionar NIfTI, preprocesados, checkpoints y `.venv`.
+
+Hallazgo tecnico: `nnUNetV2Runner` no acepta una lista de cuatro rutas NIfTI en el campo `image` del datalist. La version instalada espera que `image` sea un unico NIfTI. Por eso el script de smoke test apila las cuatro modalidades (`t1n`, `t1c`, `t2w`, `t2f`) en un NIfTI 4D temporal y despues MONAI lo separa en canales nnU-Net durante la conversion.
+
+Segundo ajuste tecnico: la ruta de conversion de MONAI espera un conjunto `test` no vacio para completar su flujo sin error. Para el smoke test se genera 1 caso de test sin etiqueta reutilizando una imagen ya apilada. Esto no representa evaluacion experimental; solo satisface el contrato tecnico de conversion.
+
+Comandos ejecutados:
+
+```bash
+python3 -m venv .venv
+.venv/bin/python -m pip install --upgrade pip setuptools wheel
+.venv/bin/python -m pip install -r requirements/nnunet-smoke.txt
+.venv/bin/python scripts/nnunet/check_brats_gli_nnunet_smoke.py
+.venv/bin/python -m monai.apps.nnunet nnUNetV2Runner convert_dataset --input_config outputs/nnunet_smoke/input.yaml
+```
+
+Resultado de conversion:
+
+- Dataset nnU-Net generado: `outputs/nnunet_smoke/nnUNet_raw/Dataset724_tfm-brain-tumor-segmentation`.
+- `num_input_channels`: 4.
+- `num_foreground_classes`: 4.
+- `imagesTr`: 12 ficheros, correspondientes a 3 casos x 4 modalidades.
+- `labelsTr`: 3 ficheros.
+- `imagesTs`: 4 ficheros, correspondientes a 1 caso de test x 4 modalidades.
+- `dataset.json` generado con canales `t1n`, `t1c`, `t2w`, `t2f`.
+- `pip check`: sin dependencias rotas.
+- No se ejecuto `plan_and_process`, preprocesamiento ni entrenamiento.
+
+Explicacion para la memoria final: este resultado valida la viabilidad tecnica de usar nnU-Net como baseline externo reproducible y, si interesa, orquestarlo desde MONAI. Tambien deja claro que la integracion requiere una preparacion especifica de datos multicanal, por lo que debe documentarse como parte del protocolo de reproducibilidad.
+
+Pendientes:
+
+- Decidir si el baseline nnU-Net final usara los datos en formato NIfTI 4D intermedio o una conversion directa propia al formato nnU-Net.
+- Definir split definitivo del TFM antes de generar la conversion completa.
+
+### 2026-05-18 - Verificacion de integridad nnU-Net en smoke test
+
+Actividad realizada: se ejecuta la verificacion de integridad y extraccion de fingerprint de nnU-Net sobre el dataset smoke test convertido.
+
+Objetivo metodologico: confirmar que el dataset generado por la ruta MONAI/nnU-Net no solo existe en disco, sino que cumple las expectativas internas de nnU-Net antes de escalar a mas casos.
+
+Procedimiento seguido:
+
+- Se intento inicialmente ejecutar `extract_fingerprints` desde un heredoc de Python.
+- El intento se detuvo porque en macOS/Python el multiprocessing con `spawn` no puede reabrir un proceso cuyo script principal es `<stdin>`.
+- Se creo un script fisico versionable para ejecutar la misma operacion de forma compatible con multiprocessing.
+- Se ejecuto la verificacion con `npfp=1` para mantener el consumo acotado.
+
+Artefacto anadido:
+
+- `scripts/nnunet/verify_brats_gli_nnunet_smoke.py`
+
+Comando ejecutado:
+
+```bash
+.venv/bin/python scripts/nnunet/verify_brats_gli_nnunet_smoke.py --clean --npfp 1
+```
+
+Resultado:
+
+- `verify_dataset_integrity Done`.
+- nnU-Net indica que, si no aparecen errores, el dataset es probablemente correcto.
+- Se extrajo el fingerprint de 3 casos.
+- Reader/writer usado por nnU-Net: `SimpleITKIO`.
+- Artefacto generado: `outputs/nnunet_smoke/nnUNet_preprocessed/Dataset724_tfm-brain-tumor-segmentation/dataset_fingerprint.json`.
+- No se ejecuto planificacion de experimentos, preprocesamiento completo ni entrenamiento.
+
+Resumen del fingerprint:
+
+- Espaciado detectado en los 3 casos: `1.0 x 1.0 x 1.0`.
+- Canales analizados: 4.
+- Shapes tras crop:
+  - `[142, 161, 128]`
+  - `[146, 184, 139]`
+  - `[143, 183, 147]`
+- `median_relative_size_after_cropping`: `0.5171138972933509`.
+
+Explicacion para la memoria final: esta prueba cierra la viabilidad tecnica minima de nnU-Net como baseline externo reproducible. La conversion MONAI produce una estructura aceptada por nnU-Net y la verificacion interna no detecta errores en el subconjunto de prueba. El resultado no valida rendimiento ni protocolo experimental final, pero reduce el riesgo tecnico antes de generar splits y conversiones completas.
+
+Pendientes:
+
+- Definir el split definitivo del TFM antes de generar el dataset nnU-Net completo.
+- Decidir estrategia final de conversion: NIfTI 4D intermedio via MONAI o conversion directa propia al formato nnU-Net.
+- Definir si nnU-Net final usara `3d_fullres` en un fold, 5 folds o configuracion recomendada segun presupuesto computacional.

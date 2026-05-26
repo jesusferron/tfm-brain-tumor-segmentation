@@ -1,0 +1,11 @@
+dataset_name_or_id: 724
+modality:
+  - t1n
+  - t1c
+  - t2w
+  - t2f
+dataroot: "/Users/jesusferron-personal/Repository/tfm-brain-tumor-segmentation"
+datalist: "outputs/nnunet_smoke/brats_gli_2024_smoke_datalist.json"
+nnunet_raw: "outputs/nnunet_smoke/nnUNet_raw"
+nnunet_preprocessed: "outputs/nnunet_smoke/nnUNet_preprocessed"
+nnunet_results: "outputs/nnunet_smoke/nnUNet_results"
