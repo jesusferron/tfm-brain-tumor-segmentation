@@ -229,19 +229,72 @@ cuda True
 
 ## 5. Ajustar Ruta Del Dataset
 
-Edita este archivo en Colab:
+El archivo del repo trae por defecto la ruta local del Mac. En Colab debes cambiarla a la ruta de Drive antes de ejecutar QC.
 
-```text
-configs/dataset/brats_gli_2024.yaml
+Primero comprueba que Drive esta montado y que existe la carpeta padre del dataset:
+
+```bash
+!ls "/content/drive/MyDrive/TFM-datasets"
 ```
 
-Cambia `dataset_root` a la ruta de Drive:
+Debe mostrar, como minimo:
+
+```text
+training_data1_v2
+training_data_additional
+validation_data
+```
+
+Si tu carpeta se llama distinto, localiza `training_data1_v2`:
+
+```bash
+!find "/content/drive/MyDrive" -maxdepth 4 -type d -name "training_data1_v2" -print
+```
+
+La ruta que debes usar como `dataset_root` es la carpeta padre de `training_data1_v2`. Por ejemplo, si el `find` devuelve:
+
+```text
+/content/drive/MyDrive/TFM-datasets/training_data1_v2
+```
+
+entonces `dataset_root` debe ser:
 
 ```yaml
 dataset_root: "/content/drive/MyDrive/TFM-datasets"
 ```
 
-Si tu carpeta se llama distinto, usa tu ruta real.
+Actualiza el YAML desde Colab:
+
+```python
+from pathlib import Path
+import yaml
+
+dataset_root = "/content/drive/MyDrive/TFM-datasets"
+
+config_path = Path("configs/dataset/brats_gli_2024.yaml")
+config = yaml.safe_load(config_path.read_text())
+config["dataset_root"] = dataset_root
+config_path.write_text(yaml.safe_dump(config, sort_keys=False), encoding="utf-8")
+print(config_path.read_text())
+```
+
+Si el `find` anterior mostro otra carpeta padre, cambia el valor de `dataset_root` en esa celda.
+
+Comprueba que Colab ve los dos roots supervisados:
+
+```bash
+!python - <<'PY'
+import yaml
+from pathlib import Path
+
+config = yaml.safe_load(Path("configs/dataset/brats_gli_2024.yaml").read_text())
+root = Path(config["dataset_root"])
+print("dataset_root:", root)
+for name in config["training_roots"]:
+    path = root / name
+    print(path, "OK" if path.is_dir() else "MISSING")
+PY
+```
 
 ## 6. Verificacion Rapida Del Dataset
 
