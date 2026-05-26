@@ -348,7 +348,7 @@ outputs/train/residual_unet_3d_colab_smoke/checkpoints/last.pt
 
 ## 8. Entrenamiento Real
 
-Si el smoke test funciona, lanza el entrenamiento real:
+Si el smoke test funciona, lanza un primer entrenamiento acotado. Este perfil usa `amp`, mayor batch efectivo y validacion menos frecuente para aprovechar mejor A100.
 
 ```bash
 !python -m tfm_brats.cli train \
@@ -357,10 +357,11 @@ Si el smoke test funciona, lanza el entrenamiento real:
   --training-config configs/training/colab_pro.yaml \
   --split-dir outputs/splits/brats_gli_2024_seed20260526 \
   --output-dir outputs/train/residual_unet_3d \
+  --max-steps 3000 \
   --device cuda
 ```
 
-Esto puede tardar horas.
+Esto puede tardar horas, pero debe imprimir lineas `train_step` con velocidad, memoria GPU y validaciones. Si no imprime ningun `train_step` en varios minutos, normalmente el cuello de botella esta en lectura desde Google Drive.
 
 Durante el entrenamiento se iran actualizando:
 
@@ -369,6 +370,26 @@ outputs/train/residual_unet_3d/train_log.csv
 outputs/train/residual_unet_3d/train_summary.json
 outputs/train/residual_unet_3d/checkpoints/last.pt
 outputs/train/residual_unet_3d/checkpoints/best.pt
+```
+
+Puedes monitorizar desde otra celda:
+
+```bash
+!tail -n 20 outputs/train/residual_unet_3d/train_log.csv
+```
+
+Si la velocidad es muy baja, copia primero el dataset al disco local del runtime y cambia `dataset_root` a `/content/TFM-datasets`:
+
+```bash
+!mkdir -p /content/TFM-datasets
+!rsync -ah --info=progress2 "/content/drive/MyDrive/TFM-datasets/training_data1_v2" /content/TFM-datasets/
+!rsync -ah --info=progress2 "/content/drive/MyDrive/TFM-datasets/training_data_additional" /content/TFM-datasets/
+```
+
+Despues actualiza el YAML igual que en el paso 5, usando:
+
+```python
+dataset_root = "/content/TFM-datasets"
 ```
 
 ## 9. Revisar Entrenamiento

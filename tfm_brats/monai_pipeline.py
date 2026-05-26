@@ -5,8 +5,10 @@ from __future__ import annotations
 import csv
 import os
 import random
+from contextlib import nullcontext
 from datetime import datetime, timezone
 from pathlib import Path
+from time import perf_counter
 from typing import Any
 
 import numpy as np
@@ -141,16 +143,27 @@ def build_dataloader(
     batch_size: int,
     num_workers: int,
     shuffle: bool,
+    pin_memory: bool = False,
+    persistent_workers: bool = False,
+    prefetch_factor: int | None = None,
 ):
     from monai.data import DataLoader, Dataset, list_data_collate
 
     dataset = Dataset(data=items, transform=transform)
+    kwargs: dict[str, Any] = {
+        "batch_size": batch_size,
+        "shuffle": shuffle,
+        "num_workers": num_workers,
+        "collate_fn": list_data_collate,
+        "pin_memory": pin_memory,
+    }
+    if num_workers > 0:
+        kwargs["persistent_workers"] = persistent_workers
+        if prefetch_factor is not None:
+            kwargs["prefetch_factor"] = prefetch_factor
     return DataLoader(
         dataset,
-        batch_size=batch_size,
-        shuffle=shuffle,
-        num_workers=num_workers,
-        collate_fn=list_data_collate,
+        **kwargs,
     )
 
 
@@ -176,6 +189,40 @@ def set_reproducibility(seed: int) -> None:
     if torch.cuda.is_available():
         torch.cuda.manual_seed_all(seed)
     set_determinism(seed=seed)
+
+
+def _cuda_memory_gb() -> float | None:
+    try:
+        import torch
+    except ImportError:
+        return None
+    if not torch.cuda.is_available():
+        return None
+    return float(torch.cuda.max_memory_allocated() / (1024**3))
+
+
+def _make_grad_scaler(device: Any, enabled: bool):
+    import torch
+
+    if hasattr(torch, "amp") and hasattr(torch.amp, "GradScaler"):
+        try:
+            return torch.amp.GradScaler(device.type, enabled=enabled)
+        except TypeError:
+            return torch.amp.GradScaler(enabled=enabled)
+    return torch.cuda.amp.GradScaler(enabled=enabled)
+
+
+def _autocast_context(device: Any, enabled: bool):
+    import torch
+
+    if not enabled:
+        return nullcontext()
+    if hasattr(torch, "amp") and hasattr(torch.amp, "autocast"):
+        try:
+            return torch.amp.autocast(device_type=device.type, enabled=enabled)
+        except TypeError:
+            return torch.amp.autocast(enabled=enabled)
+    return torch.cuda.amp.autocast(enabled=enabled)
 
 
 def build_model(model_config: dict[str, Any]):
@@ -317,6 +364,9 @@ def _append_log_row(log_path: Path, row: dict[str, Any], *, write_header: bool =
         "mean_dice",
         "lr",
         "checkpoint",
+        "elapsed_seconds",
+        "steps_per_second",
+        "gpu_memory_gb",
     ]
     with log_path.open("a", newline="", encoding="utf-8") as handle:
         writer = csv.DictWriter(handle, fieldnames=fieldnames, extrasaction="ignore")
@@ -335,6 +385,7 @@ def validate_with_sliding_window(
     sw_batch_size: int,
     overlap: float,
     max_batches: int,
+    amp: bool = False,
 ) -> dict[str, float]:
     import torch
     from monai.inferers import sliding_window_inference
@@ -346,15 +397,16 @@ def validate_with_sliding_window(
     model.eval()
     with torch.no_grad():
         for batch_index, batch in enumerate(val_loader):
-            images = batch["image"].to(device)
-            labels = batch["label"].to(device).float()
-            logits = sliding_window_inference(
-                images,
-                roi_size=roi_size,
-                sw_batch_size=sw_batch_size,
-                predictor=model,
-                overlap=overlap,
-            )
+            images = batch["image"].to(device, non_blocking=True)
+            labels = batch["label"].to(device, non_blocking=True).float()
+            with _autocast_context(device, amp):
+                logits = sliding_window_inference(
+                    images,
+                    roi_size=roi_size,
+                    sw_batch_size=sw_batch_size,
+                    predictor=model,
+                    overlap=overlap,
+                )
             scores.append(_batch_region_dice(logits, labels))
             if batch_index + 1 >= max_batches:
                 break
@@ -395,22 +447,36 @@ def train_one_run(
 
     train_transform = build_transforms(training_config, training=True)
     val_transform = build_transforms(training_config, training=False)
+    device = resolve_device(str(training_config.get("device", "auto")))
+    num_workers = int(training_config.get("num_workers", 0))
+    pin_memory = bool(training_config.get("pin_memory", device.type == "cuda"))
+    persistent_workers = bool(training_config.get("persistent_workers", num_workers > 0))
+    prefetch_factor_raw = training_config.get("prefetch_factor")
+    prefetch_factor = int(prefetch_factor_raw) if prefetch_factor_raw is not None else None
     train_loader = build_dataloader(
         train_items,
         train_transform,
         batch_size=int(training_config.get("batch_size", 1)),
-        num_workers=int(training_config.get("num_workers", 0)),
+        num_workers=num_workers,
         shuffle=True,
+        pin_memory=pin_memory,
+        persistent_workers=persistent_workers,
+        prefetch_factor=prefetch_factor,
     )
     val_loader = build_dataloader(
         val_items,
         val_transform,
         batch_size=1,
-        num_workers=int(training_config.get("num_workers", 0)),
+        num_workers=num_workers,
         shuffle=False,
+        pin_memory=pin_memory,
+        persistent_workers=persistent_workers,
+        prefetch_factor=prefetch_factor,
     )
 
-    device = resolve_device(str(training_config.get("device", "auto")))
+    if device.type == "cuda" and bool(training_config.get("cudnn_benchmark", False)):
+        torch.backends.cudnn.benchmark = True
+    amp = bool(training_config.get("amp", device.type == "cuda")) and device.type == "cuda"
     model = build_model(model_config).to(device)
     loss_fn = DiceCELoss(sigmoid=True, squared_pred=True)
     optimizer = torch.optim.AdamW(
@@ -418,6 +484,7 @@ def train_one_run(
         lr=float(training_config.get("learning_rate", 1e-4)),
         weight_decay=float(training_config.get("weight_decay", 1e-5)),
     )
+    scaler = _make_grad_scaler(device, amp)
 
     output_dir.mkdir(parents=True, exist_ok=True)
     checkpoint_dir = output_dir / "checkpoints"
@@ -446,24 +513,43 @@ def train_one_run(
     best_epoch: int | None = None
     last_validation: dict[str, float] = {}
     stop_training = False
+    start_time = perf_counter()
+    print(
+        "Training setup: "
+        f"device={device}, amp={amp}, train_cases={len(train_items)}, val_cases={len(val_items)}, "
+        f"batch_size={int(training_config.get('batch_size', 1))}, "
+        f"samples_per_case={int(training_config.get('samples_per_case', 2))}, "
+        f"num_workers={num_workers}, pin_memory={pin_memory}, "
+        f"persistent_workers={persistent_workers}, prefetch_factor={prefetch_factor}",
+        flush=True,
+    )
 
     model.train()
     for epoch in range(max_epochs):
         epoch_losses: list[float] = []
         for batch_index, batch in enumerate(train_loader):
-            images = batch["image"].to(device)
-            labels = batch["label"].to(device).float()
+            images = batch["image"].to(device, non_blocking=True)
+            labels = batch["label"].to(device, non_blocking=True).float()
             optimizer.zero_grad(set_to_none=True)
-            logits = model(images)
-            loss = loss_fn(logits, labels)
-            loss.backward()
-            optimizer.step()
+            with _autocast_context(device, amp):
+                logits = model(images)
+                loss = loss_fn(logits, labels)
+            if scaler.is_enabled():
+                scaler.scale(loss).backward()
+                scaler.step(optimizer)
+                scaler.update()
+            else:
+                loss.backward()
+                optimizer.step()
             loss_value = float(loss.detach().cpu())
             losses.append(loss_value)
             epoch_losses.append(loss_value)
             global_step += 1
 
             if log_every_steps > 0 and (global_step == 1 or global_step % log_every_steps == 0):
+                elapsed = perf_counter() - start_time
+                steps_per_second = global_step / elapsed if elapsed > 0 else 0.0
+                gpu_memory_gb = _cuda_memory_gb()
                 _append_log_row(
                     log_path,
                     {
@@ -473,7 +559,16 @@ def train_one_run(
                         "batch": batch_index,
                         "loss": loss_value,
                         "lr": optimizer.param_groups[0]["lr"],
+                        "elapsed_seconds": elapsed,
+                        "steps_per_second": steps_per_second,
+                        "gpu_memory_gb": gpu_memory_gb if gpu_memory_gb is not None else "",
                     },
+                )
+                gpu_text = f", gpu_mem={gpu_memory_gb:.2f}GB" if gpu_memory_gb is not None else ""
+                print(
+                    f"train_step epoch={epoch + 1} step={global_step} "
+                    f"loss={loss_value:.5f} speed={steps_per_second:.3f} step/s{gpu_text}",
+                    flush=True,
                 )
             if step_limit is not None and global_step >= step_limit:
                 stop_training = True
@@ -485,6 +580,8 @@ def train_one_run(
             and ((epoch + 1) % validation_interval == 0 or stop_training)
         )
         if should_validate:
+            validation_start = perf_counter()
+            print(f"validation_start epoch={epoch + 1} step={global_step}", flush=True)
             last_validation = validate_with_sliding_window(
                 model=model,
                 val_loader=val_loader,
@@ -493,7 +590,9 @@ def train_one_run(
                 sw_batch_size=sw_batch_size,
                 overlap=overlap,
                 max_batches=validation_batches,
+                amp=amp,
             )
+            validation_elapsed = perf_counter() - validation_start
             metric = float(last_validation.get("mean_dice", -1.0))
             checkpoint_path = checkpoint_dir / "last.pt"
             torch.save(
@@ -526,6 +625,8 @@ def train_one_run(
                     ),
                     checkpoint_dir / "best.pt",
                 )
+            elapsed = perf_counter() - start_time
+            gpu_memory_gb = _cuda_memory_gb()
             _append_log_row(
                 log_path,
                 {
@@ -539,7 +640,15 @@ def train_one_run(
                     "mean_dice": last_validation.get("mean_dice", ""),
                     "lr": optimizer.param_groups[0]["lr"],
                     "checkpoint": "best.pt" if is_best else "last.pt",
+                    "elapsed_seconds": elapsed,
+                    "steps_per_second": global_step / elapsed if elapsed > 0 else 0.0,
+                    "gpu_memory_gb": gpu_memory_gb if gpu_memory_gb is not None else "",
                 },
+            )
+            print(
+                f"validation_done epoch={epoch + 1} mean_dice={last_validation.get('mean_dice', '')} "
+                f"elapsed={validation_elapsed:.1f}s checkpoint={'best.pt' if is_best else 'last.pt'}",
+                flush=True,
             )
             model.train()
 
@@ -569,6 +678,11 @@ def train_one_run(
         "train_cases": len(train_items),
         "val_cases": len(val_items),
         "global_step": global_step,
+        "amp": amp,
+        "num_workers": num_workers,
+        "pin_memory": pin_memory,
+        "persistent_workers": persistent_workers,
+        "prefetch_factor": prefetch_factor,
         "loss_last": losses[-1] if losses else None,
         "loss_mean": float(np.mean(losses)) if losses else None,
         "validation": last_validation,
