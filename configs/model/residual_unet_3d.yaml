@@ -1,0 +1,20 @@
+model:
+  name: residual_unet_3d
+  implementation: monai.networks.nets.UNet
+  in_channels: 4
+  out_channels: 3
+  channels: [16, 32, 64, 128]
+  strides: [2, 2, 2]
+  num_res_units: 2
+  fusion: concat
+  supported_fusions:
+    - concat
+    - global_weighted
+    - adaptive_gating
+  experiment_priority:
+    - residual_unet_3d
+    - nnunet_external
+    - swin_unetr
+    - fusion_ablations
+    - attention_unet
+    - transbts

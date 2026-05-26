@@ -1,0 +1,23 @@
+environment:
+  name: local_mac
+  role: qc_smoke_analysis
+  python: ".venv/bin/python"
+  expected_accelerator: cpu_or_mps
+  mplconfigdir: "/private/tmp/matplotlib"
+  artifact_policy:
+    keep_in_git:
+      - configs
+      - outputs/qc/*.csv
+      - outputs/qc/*.json
+      - outputs/splits/**/*.txt
+      - outputs/splits/**/*.csv
+      - outputs/splits/**/*.json
+      - outputs/evaluation/**/*.csv
+      - outputs/evaluation/**/*.json
+    keep_out_of_git:
+      - "*.nii"
+      - "*.nii.gz"
+      - "outputs/**/checkpoints"
+      - "outputs/**/nnUNet_raw"
+      - "outputs/**/nnUNet_preprocessed"
+      - "outputs/**/nnUNet_results"

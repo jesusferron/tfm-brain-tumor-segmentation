@@ -1,0 +1,13 @@
+evaluation:
+  regions:
+    - ET
+    - TC
+    - WT
+  metrics:
+    - dice
+    - hd95
+  prediction_suffix: ".nii.gz"
+  empty_region_policy:
+    dice_when_both_empty: 1.0
+    hd95_when_both_empty: 0.0
+    hd95_when_one_empty: inf

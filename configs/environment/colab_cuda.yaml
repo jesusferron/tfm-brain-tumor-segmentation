@@ -1,0 +1,16 @@
+environment:
+  name: colab_cuda
+  role: training
+  python: "python"
+  expected_accelerator: cuda
+  artifact_policy:
+    sync_to_repo:
+      - configs
+      - outputs/splits
+      - outputs/evaluation
+    keep_on_runtime_or_drive:
+      - nnUNet_raw
+      - nnUNet_preprocessed
+      - nnUNet_results
+      - checkpoints
+      - predictions

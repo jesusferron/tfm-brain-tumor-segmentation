@@ -1,0 +1,2 @@
+case_id,origin,prediction,label,ET_dice,ET_hd95,TC_dice,TC_hd95,WT_dice,WT_hd95
+BraTS-GLI-00006-101,training_data1_v2,outputs/predictions/eval_smoke/BraTS-GLI-00006-101.nii.gz,/Volumes/External M2/Datos/TFM-datasets/training_data1_v2/BraTS-GLI-00006-101/BraTS-GLI-00006-101-seg.nii.gz,1.0,0.0,1.0,0.0,1.0,0.0

@@ -1,0 +1,88 @@
+{
+  "distribution": {
+    "test": {
+      "count": 1,
+      "et_counts": {
+        "absent": 1
+      },
+      "origin_counts": {
+        "training_data1_v2": 1
+      },
+      "stratum_counts": {
+        "origin=training_data1_v2|et=0|wt_bin=q4": 1
+      },
+      "volume_bin_counts": {
+        "q4": 1
+      }
+    },
+    "train": {
+      "count": 3,
+      "et_counts": {
+        "absent": 3
+      },
+      "origin_counts": {
+        "training_data1_v2": 3
+      },
+      "stratum_counts": {
+        "origin=training_data1_v2|et=0|wt_bin=q2": 1,
+        "origin=training_data1_v2|et=0|wt_bin=q3": 1,
+        "origin=training_data1_v2|et=0|wt_bin=q4": 1
+      },
+      "volume_bin_counts": {
+        "q2": 1,
+        "q3": 1,
+        "q4": 1
+      }
+    },
+    "val": {
+      "count": 1,
+      "et_counts": {
+        "present": 1
+      },
+      "origin_counts": {
+        "training_data1_v2": 1
+      },
+      "stratum_counts": {
+        "origin=training_data1_v2|et=1|wt_bin=q1": 1
+      },
+      "volume_bin_counts": {
+        "q1": 1
+      }
+    }
+  },
+  "generated_at_utc": "2026-05-26T08:37:32.170927+00:00",
+  "outputs": {
+    "test": {
+      "csv": "outputs/splits/brats_gli_2024_seed20260526_sample/test.csv",
+      "txt": "outputs/splits/brats_gli_2024_seed20260526_sample/test.txt"
+    },
+    "train": {
+      "csv": "outputs/splits/brats_gli_2024_seed20260526_sample/train.csv",
+      "txt": "outputs/splits/brats_gli_2024_seed20260526_sample/train.txt"
+    },
+    "val": {
+      "csv": "outputs/splits/brats_gli_2024_seed20260526_sample/val.csv",
+      "txt": "outputs/splits/brats_gli_2024_seed20260526_sample/val.txt"
+    }
+  },
+  "ratios": {
+    "test": 0.15,
+    "train": 0.7,
+    "val": 0.15
+  },
+  "seed": 20260526,
+  "source_qc_csv": "outputs/qc/brats_gli_2024_qc_sample.csv",
+  "split_order": [
+    "train",
+    "val",
+    "test"
+  ],
+  "validation": {
+    "expected_total": 5,
+    "missing_count": 0,
+    "observed_total": 5,
+    "ok": true,
+    "overlaps": []
+  },
+  "volume_bins": 4
+}

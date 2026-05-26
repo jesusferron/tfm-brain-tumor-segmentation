@@ -1,0 +1,2 @@
+case_id,origin,prediction,label,ET_dice,ET_hd95,TC_dice,TC_hd95,WT_dice,WT_hd95
+BraTS-GLI-00080-100,training_data1_v2,outputs/predictions/residual_unet_3d_pipeline_smoke_test/BraTS-GLI-00080-100.nii.gz,/Volumes/External M2/Datos/TFM-datasets/training_data1_v2/BraTS-GLI-00080-100/BraTS-GLI-00080-100-seg.nii.gz,0.003005343633526726,129.3560976529518,0.00431828553217044,130.26511428621248,0.011041892383785381,123.04064369142418

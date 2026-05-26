@@ -1,0 +1,43 @@
+{
+  "aggregates": {
+    "ET_dice": {
+      "count": 1,
+      "finite_count": 1,
+      "mean": 1.0,
+      "median": 1.0
+    },
+    "ET_hd95": {
+      "count": 1,
+      "finite_count": 1,
+      "mean": 0.0,
+      "median": 0.0
+    },
+    "TC_dice": {
+      "count": 1,
+      "finite_count": 1,
+      "mean": 1.0,
+      "median": 1.0
+    },
+    "TC_hd95": {
+      "count": 1,
+      "finite_count": 1,
+      "mean": 0.0,
+      "median": 0.0
+    },
+    "WT_dice": {
+      "count": 1,
+      "finite_count": 1,
+      "mean": 1.0,
+      "median": 1.0
+    },
+    "WT_hd95": {
+      "count": 1,
+      "finite_count": 1,
+      "mean": 0.0,
+      "median": 0.0
+    }
+  },
+  "cases": 1,
+  "output_csv": "outputs/evaluation/eval_smoke_metrics.csv",
+  "predictions_dir": "outputs/predictions/eval_smoke"
+}

@@ -1,0 +1,2 @@
+case_id,origin,stratum,volume_bin,et_voxels,tc_voxels,wt_voxels
+BraTS-GLI-00008-100,training_data1_v2,origin=training_data1_v2|et=1|wt_bin=q1,q1,135,1951,8927

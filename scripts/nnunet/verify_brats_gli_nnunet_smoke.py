@@ -4,7 +4,11 @@
 from __future__ import annotations
 
 import argparse
+import os
 from multiprocessing import freeze_support
+
+os.environ.setdefault("MPLCONFIGDIR", "/private/tmp/matplotlib")
+os.environ.setdefault("XDG_CACHE_HOME", "/private/tmp")
 
 from monai.apps.nnunet import nnUNetV2Runner
 

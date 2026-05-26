@@ -1,0 +1,141 @@
+{
+  "distribution": {
+    "test": {
+      "count": 243,
+      "et_counts": {
+        "absent": 61,
+        "present": 182
+      },
+      "origin_counts": {
+        "training_data1_v2": 201,
+        "training_data_additional": 42
+      },
+      "stratum_counts": {
+        "origin=training_data1_v2|et=0|wt_bin=q1": 22,
+        "origin=training_data1_v2|et=0|wt_bin=q2": 16,
+        "origin=training_data1_v2|et=0|wt_bin=q3": 10,
+        "origin=training_data1_v2|et=0|wt_bin=q4": 5,
+        "origin=training_data1_v2|et=1|wt_bin=q1": 26,
+        "origin=training_data1_v2|et=1|wt_bin=q2": 35,
+        "origin=training_data1_v2|et=1|wt_bin=q3": 42,
+        "origin=training_data1_v2|et=1|wt_bin=q4": 45,
+        "origin=training_data_additional|et=0|wt_bin=q1": 5,
+        "origin=training_data_additional|et=0|wt_bin=q2": 1,
+        "origin=training_data_additional|et=0|wt_bin=q3": 1,
+        "origin=training_data_additional|et=0|wt_bin=q4": 1,
+        "origin=training_data_additional|et=1|wt_bin=q1": 7,
+        "origin=training_data_additional|et=1|wt_bin=q2": 9,
+        "origin=training_data_additional|et=1|wt_bin=q3": 8,
+        "origin=training_data_additional|et=1|wt_bin=q4": 10
+      },
+      "volume_bin_counts": {
+        "q1": 60,
+        "q2": 61,
+        "q3": 61,
+        "q4": 61
+      }
+    },
+    "train": {
+      "count": 1135,
+      "et_counts": {
+        "absent": 277,
+        "present": 858
+      },
+      "origin_counts": {
+        "training_data1_v2": 946,
+        "training_data_additional": 189
+      },
+      "stratum_counts": {
+        "origin=training_data1_v2|et=0|wt_bin=q1": 105,
+        "origin=training_data1_v2|et=0|wt_bin=q2": 74,
+        "origin=training_data1_v2|et=0|wt_bin=q3": 48,
+        "origin=training_data1_v2|et=0|wt_bin=q4": 25,
+        "origin=training_data1_v2|et=1|wt_bin=q1": 123,
+        "origin=training_data1_v2|et=1|wt_bin=q2": 163,
+        "origin=training_data1_v2|et=1|wt_bin=q3": 196,
+        "origin=training_data1_v2|et=1|wt_bin=q4": 212,
+        "origin=training_data_additional|et=0|wt_bin=q1": 20,
+        "origin=training_data_additional|et=0|wt_bin=q2": 4,
+        "origin=training_data_additional|et=0|wt_bin=q3": 1,
+        "origin=training_data_additional|et=1|wt_bin=q1": 36,
+        "origin=training_data_additional|et=1|wt_bin=q2": 42,
+        "origin=training_data_additional|et=1|wt_bin=q3": 38,
+        "origin=training_data_additional|et=1|wt_bin=q4": 48
+      },
+      "volume_bin_counts": {
+        "q1": 284,
+        "q2": 283,
+        "q3": 283,
+        "q4": 285
+      }
+    },
+    "val": {
+      "count": 243,
+      "et_counts": {
+        "absent": 60,
+        "present": 183
+      },
+      "origin_counts": {
+        "training_data1_v2": 203,
+        "training_data_additional": 40
+      },
+      "stratum_counts": {
+        "origin=training_data1_v2|et=0|wt_bin=q1": 23,
+        "origin=training_data1_v2|et=0|wt_bin=q2": 16,
+        "origin=training_data1_v2|et=0|wt_bin=q3": 11,
+        "origin=training_data1_v2|et=0|wt_bin=q4": 5,
+        "origin=training_data1_v2|et=1|wt_bin=q1": 26,
+        "origin=training_data1_v2|et=1|wt_bin=q2": 35,
+        "origin=training_data1_v2|et=1|wt_bin=q3": 42,
+        "origin=training_data1_v2|et=1|wt_bin=q4": 45,
+        "origin=training_data_additional|et=0|wt_bin=q1": 4,
+        "origin=training_data_additional|et=0|wt_bin=q2": 1,
+        "origin=training_data_additional|et=1|wt_bin=q1": 8,
+        "origin=training_data_additional|et=1|wt_bin=q2": 9,
+        "origin=training_data_additional|et=1|wt_bin=q3": 8,
+        "origin=training_data_additional|et=1|wt_bin=q4": 10
+      },
+      "volume_bin_counts": {
+        "q1": 61,
+        "q2": 61,
+        "q3": 61,
+        "q4": 60
+      }
+    }
+  },
+  "generated_at_utc": "2026-05-26T09:33:21.546578+00:00",
+  "outputs": {
+    "test": {
+      "csv": "outputs/splits/brats_gli_2024_seed20260526/test.csv",
+      "txt": "outputs/splits/brats_gli_2024_seed20260526/test.txt"
+    },
+    "train": {
+      "csv": "outputs/splits/brats_gli_2024_seed20260526/train.csv",
+      "txt": "outputs/splits/brats_gli_2024_seed20260526/train.txt"
+    },
+    "val": {
+      "csv": "outputs/splits/brats_gli_2024_seed20260526/val.csv",
+      "txt": "outputs/splits/brats_gli_2024_seed20260526/val.txt"
+    }
+  },
+  "ratios": {
+    "test": 0.15,
+    "train": 0.7,
+    "val": 0.15
+  },
+  "seed": 20260526,
+  "source_qc_csv": "outputs/qc/brats_gli_2024_qc.csv",
+  "split_order": [
+    "train",
+    "val",
+    "test"
+  ],
+  "validation": {
+    "expected_total": 1621,
+    "missing_count": 0,
+    "observed_total": 1621,
+    "ok": true,
+    "overlaps": []
+  },
+  "volume_bins": 4
+}

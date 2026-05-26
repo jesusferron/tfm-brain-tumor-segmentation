@@ -3,15 +3,21 @@
 *.nii.gz
 
 # nnU-Net generated directories. Keep small smoke-test YAML/JSON files versionable.
+nnUNet_raw/
+nnUNet_preprocessed/
+nnUNet_results/
 outputs/**/nnUNet_raw/
 outputs/**/nnUNet_preprocessed/
 outputs/**/nnUNet_results/
 
 # Training artifacts.
+outputs/train/
 outputs/**/checkpoints/
+outputs/**/predictions/
 outputs/**/*.ckpt
 outputs/**/*.pt
 outputs/**/*.pth
+*.npz
 
 # Python cache files.
 .venv/

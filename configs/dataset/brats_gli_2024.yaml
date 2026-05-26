@@ -1,0 +1,25 @@
+name: brats_gli_2024
+dataset_root: "/Volumes/External M2/Datos/TFM-datasets"
+training_roots:
+  - training_data1_v2
+  - training_data_additional
+modalities:
+  - t1n
+  - t1c
+  - t2w
+  - t2f
+label_suffix: seg
+expected_case_prefix: BraTS-GLI-
+valid_labels:
+  - 0
+  - 1
+  - 2
+  - 3
+  - 4
+regions:
+  ET:
+    labels: [3]
+  TC:
+    labels: [1, 3, 4]
+  WT:
+    labels: [1, 2, 3, 4]

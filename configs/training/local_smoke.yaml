@@ -1,0 +1,21 @@
+training:
+  seed: 20260526
+  device: auto
+  patch_size: [64, 64, 64]
+  divisible_k: 16
+  sliding_window_roi_size: [64, 64, 64]
+  sliding_window_batch_size: 1
+  sliding_window_overlap: 0.25
+  prediction_threshold: 0.5
+  samples_per_case: 1
+  positive_crop_ratio: 1.0
+  negative_crop_ratio: 1.0
+  batch_size: 1
+  num_workers: 0
+  max_epochs: 1
+  max_steps: 2
+  validation_batches: 1
+  validation_interval: 1
+  log_every_steps: 1
+  learning_rate: 0.0001
+  weight_decay: 0.00001

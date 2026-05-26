@@ -1,0 +1,43 @@
+{
+  "aggregates": {
+    "ET_dice": {
+      "count": 1,
+      "finite_count": 1,
+      "mean": 0.003005343633526726,
+      "median": 0.003005343633526726
+    },
+    "ET_hd95": {
+      "count": 1,
+      "finite_count": 1,
+      "mean": 129.3560976529518,
+      "median": 129.3560976529518
+    },
+    "TC_dice": {
+      "count": 1,
+      "finite_count": 1,
+      "mean": 0.00431828553217044,
+      "median": 0.00431828553217044
+    },
+    "TC_hd95": {
+      "count": 1,
+      "finite_count": 1,
+      "mean": 130.26511428621248,
+      "median": 130.26511428621248
+    },
+    "WT_dice": {
+      "count": 1,
+      "finite_count": 1,
+      "mean": 0.011041892383785381,
+      "median": 0.011041892383785381
+    },
+    "WT_hd95": {
+      "count": 1,
+      "finite_count": 1,
+      "mean": 123.04064369142418,
+      "median": 123.04064369142418
+    }
+  },
+  "cases": 1,
+  "output_csv": "outputs/evaluation/residual_unet_3d_pipeline_smoke_metrics.csv",
+  "predictions_dir": "outputs/predictions/residual_unet_3d_pipeline_smoke_test"
+}

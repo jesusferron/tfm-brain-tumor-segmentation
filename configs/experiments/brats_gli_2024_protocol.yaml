@@ -1,0 +1,44 @@
+protocol:
+  dataset: configs/dataset/brats_gli_2024.yaml
+  split_dir: outputs/splits/brats_gli_2024_seed20260526
+  seed: 20260526
+  split_ratios:
+    train: 0.70
+    val: 0.15
+    test: 0.15
+  primary_metrics:
+    - ET_dice
+    - TC_dice
+    - WT_dice
+    - ET_hd95
+    - TC_hd95
+    - WT_hd95
+  experiment_priority:
+    - id: residual_unet_3d_concat
+      model_config: configs/model/residual_unet_3d.yaml
+      purpose: baseline_monai
+    - id: nnunet_external
+      model_config: configs/nnunet/brats_gli_2024_monai_input.yaml
+      purpose: external_baseline
+    - id: swin_unetr
+      purpose: transformer_baseline_after_unet
+    - id: residual_unet_3d_fusion_global_weighted
+      model_config: configs/model/residual_unet_3d_global_weighted.yaml
+      purpose: fusion_ablation
+    - id: residual_unet_3d_fusion_adaptive_gating
+      model_config: configs/model/residual_unet_3d_adaptive_gating.yaml
+      purpose: fusion_ablation
+    - id: attention_unet
+      purpose: later_phase_if_core_is_stable
+    - id: transbts
+      purpose: later_phase_if_core_is_stable
+  fusion_ablation:
+    baseline_concat:
+      description: concatenate t1n/t1c/t2w/t2f as input channels
+      model_config: configs/model/residual_unet_3d.yaml
+    global_weighted:
+      description: learn global modality weights with softmax and scale channels before the encoder
+      model_config: configs/model/residual_unet_3d_global_weighted.yaml
+    adaptive_gating:
+      description: compute per-case modality gates from aggregated modality features
+      model_config: configs/model/residual_unet_3d_adaptive_gating.yaml

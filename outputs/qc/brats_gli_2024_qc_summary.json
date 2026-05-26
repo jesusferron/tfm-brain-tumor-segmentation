@@ -1,0 +1,49 @@
+{
+  "cases_with_et": 1223,
+  "cases_without_et": 398,
+  "collect_intensity_stats": true,
+  "dataset": {
+    "dataset_root": "/Volumes/External M2/Datos/TFM-datasets",
+    "expected_case_prefix": "BraTS-GLI-",
+    "label_suffix": "seg",
+    "modalities": [
+      "t1n",
+      "t1c",
+      "t2w",
+      "t2f"
+    ],
+    "name": "brats_gli_2024",
+    "training_roots": [
+      "training_data1_v2",
+      "training_data_additional"
+    ],
+    "valid_labels": [
+      0,
+      1,
+      2,
+      3,
+      4
+    ]
+  },
+  "generated_at_utc": "2026-05-26T09:31:36.059683+00:00",
+  "label_values_union": [
+    0,
+    1,
+    2,
+    3,
+    4
+  ],
+  "origin_counts": {
+    "training_data1_v2": 1350,
+    "training_data_additional": 271
+  },
+  "outputs": {
+    "csv": "outputs/qc/brats_gli_2024_qc.csv",
+    "json": "outputs/qc/brats_gli_2024_qc_summary.json"
+  },
+  "problem_counts": {},
+  "status_counts": {
+    "ok": 1621
+  },
+  "total_cases": 1621
+}

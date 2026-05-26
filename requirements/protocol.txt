@@ -1,0 +1,8 @@
+# Dependencies for QC, split generation, MONAI smoke training and evaluation.
+
+numpy
+scipy
+nibabel
+PyYAML
+torch
+monai
