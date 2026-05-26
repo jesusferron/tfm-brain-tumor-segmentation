@@ -391,6 +391,7 @@ def _append_log_row(log_path: Path, row: dict[str, Any], *, write_header: bool =
         "batch_total",
         "remaining_steps",
         "case_ids",
+        "patches",
         "loss",
         "ET_dice",
         "TC_dice",
@@ -399,7 +400,11 @@ def _append_log_row(log_path: Path, row: dict[str, Any], *, write_header: bool =
         "lr",
         "checkpoint",
         "elapsed_seconds",
+        "data_wait_seconds",
+        "compute_seconds",
+        "step_seconds",
         "steps_per_second",
+        "patches_per_second",
         "gpu_memory_gb",
     ]
     with log_path.open("a", newline="", encoding="utf-8") as handle:
@@ -542,6 +547,7 @@ def train_one_run(
     overlap = float(training_config.get("sliding_window_overlap", 0.5))
 
     global_step = 0
+    total_patches = 0
     losses: list[float] = []
     best_metric = -1.0
     best_epoch: int | None = None
@@ -562,9 +568,13 @@ def train_one_run(
     for epoch in range(max_epochs):
         epoch_losses: list[float] = []
         train_batch_total = len(train_loader)
+        previous_step_end = perf_counter()
         for batch_index, batch in enumerate(train_loader):
+            batch_ready = perf_counter()
+            data_wait_seconds = batch_ready - previous_step_end
             images = batch["image"].to(device, non_blocking=True)
             labels = batch["label"].to(device, non_blocking=True).float()
+            patches = int(images.shape[0])
             optimizer.zero_grad(set_to_none=True)
             with _autocast_context(device, amp):
                 logits = model(images)
@@ -577,9 +587,14 @@ def train_one_run(
                 loss.backward()
                 optimizer.step()
             loss_value = float(loss.detach().cpu())
+            step_end = perf_counter()
+            compute_seconds = step_end - batch_ready
+            step_seconds = step_end - previous_step_end
+            previous_step_end = step_end
             losses.append(loss_value)
             epoch_losses.append(loss_value)
             global_step += 1
+            total_patches += patches
             batch_number = batch_index + 1
             remaining_steps = step_limit - global_step if step_limit is not None else ""
             case_ids = _format_case_ids(batch)
@@ -587,6 +602,7 @@ def train_one_run(
             if log_every_steps > 0 and (global_step == 1 or global_step % log_every_steps == 0):
                 elapsed = perf_counter() - start_time
                 steps_per_second = global_step / elapsed if elapsed > 0 else 0.0
+                patches_per_second = total_patches / elapsed if elapsed > 0 else 0.0
                 gpu_memory_gb = _cuda_memory_gb()
                 _append_log_row(
                     log_path,
@@ -598,10 +614,15 @@ def train_one_run(
                         "batch_total": train_batch_total,
                         "remaining_steps": remaining_steps,
                         "case_ids": case_ids,
+                        "patches": patches,
                         "loss": loss_value,
                         "lr": optimizer.param_groups[0]["lr"],
                         "elapsed_seconds": elapsed,
+                        "data_wait_seconds": data_wait_seconds,
+                        "compute_seconds": compute_seconds,
+                        "step_seconds": step_seconds,
                         "steps_per_second": steps_per_second,
+                        "patches_per_second": patches_per_second,
                         "gpu_memory_gb": gpu_memory_gb if gpu_memory_gb is not None else "",
                     },
                 )
@@ -609,7 +630,9 @@ def train_one_run(
                 print(
                     f"train_step epoch={epoch + 1} batch={batch_number}/{train_batch_total} "
                     f"step={global_step} remaining={remaining_steps} case_ids={case_ids} "
-                    f"loss={loss_value:.5f} speed={steps_per_second:.3f} step/s{gpu_text}",
+                    f"patches={patches} loss={loss_value:.5f} "
+                    f"data_wait={data_wait_seconds:.2f}s compute={compute_seconds:.2f}s "
+                    f"speed={steps_per_second:.3f} step/s patch_rate={patches_per_second:.2f}/s{gpu_text}",
                     flush=True,
                 )
             if step_limit is not None and global_step >= step_limit:
@@ -685,6 +708,7 @@ def train_one_run(
                     "checkpoint": "best.pt" if is_best else "last.pt",
                     "elapsed_seconds": elapsed,
                     "steps_per_second": global_step / elapsed if elapsed > 0 else 0.0,
+                    "patches_per_second": total_patches / elapsed if elapsed > 0 else 0.0,
                     "gpu_memory_gb": gpu_memory_gb if gpu_memory_gb is not None else "",
                 },
             )
@@ -721,6 +745,7 @@ def train_one_run(
         "train_cases": len(train_items),
         "val_cases": len(val_items),
         "global_step": global_step,
+        "total_patches": total_patches,
         "amp": amp,
         "num_workers": num_workers,
         "pin_memory": pin_memory,

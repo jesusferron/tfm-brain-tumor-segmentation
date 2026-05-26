@@ -361,7 +361,7 @@ Si el smoke test funciona, lanza un primer entrenamiento acotado. Este perfil us
   --device cuda
 ```
 
-Esto puede tardar horas, pero debe imprimir lineas `train_step` con batch, pasos restantes, `case_id`, velocidad, memoria GPU y validaciones. Si no imprime ningun `train_step` en varios minutos, normalmente el cuello de botella esta en lectura desde Google Drive.
+Esto puede tardar horas, pero debe imprimir lineas `train_step` con batch, pasos restantes, `case_id`, patches, tiempo de espera de datos, tiempo de computo, velocidad, memoria GPU y validaciones. Si `data_wait` domina claramente a `compute`, normalmente el cuello de botella esta en lectura desde Google Drive o transformaciones CPU.
 
 Durante el entrenamiento se iran actualizando:
 

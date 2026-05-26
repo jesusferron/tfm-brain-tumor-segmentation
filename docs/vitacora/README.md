@@ -428,3 +428,12 @@ Pendientes:
 - Registrar GPU exacta de `nvidia-smi`, velocidad `step/s`, memoria GPU maxima y tiempo hasta el primer `train_step`.
 - Si la velocidad sigue baja, copiar `training_data1_v2` y `training_data_additional` a `/content/TFM-datasets` y repetir con el mismo comando.
 - Conservar `train_log.csv`, `train_summary.json` y el resumen de validacion para decidir si el baseline es suficiente o si hay que ajustar `patch_size`, `batch_size`, `samples_per_case` o frecuencia de validacion.
+
+Actualizacion posterior del mismo dia:
+
+- La ejecucion en A100 mostro progreso real en GPU: `gpu_mem=5.43GB`, `batch_size=2`, `samples_per_case=2`, `train_cases=1135`, `val_cases=243`.
+- La velocidad observada tras 20 pasos fue aproximadamente `0.209 step/s`, es decir, unos 5 segundos por paso.
+- Se concluye que la memoria GPU baja no implica por si sola un error; el indicador relevante pasa a ser el reparto entre espera de datos y computo.
+- Se aumenta `samples_per_case` de 2 a 4 en `configs/training/colab_pro.yaml` para procesar mas patches por cada caso leido y amortizar mejor el I/O.
+- Se amplia el log de entrenamiento con `patches`, `data_wait_seconds`, `compute_seconds`, `step_seconds` y `patches_per_second`.
+- La siguiente decision dependera de esos tiempos: si domina `data_wait`, copiar dataset a `/content/TFM-datasets`; si domina `compute`, ajustar batch efectivo, `patch_size` o numero total de pasos.
