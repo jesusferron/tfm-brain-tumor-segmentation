@@ -1,6 +1,6 @@
 # Bitacora metodologica del TFM
 
-Ultima actualizacion: 2026-05-18
+Ultima actualizacion: 2026-05-26
 
 Este documento registra, de forma incremental, la metodologia seguida durante el TFM. Su objetivo no es duplicar la memoria final, sino conservar la trazabilidad de lo que se decide, por que se decide, como se ejecuta y que evidencia queda disponible para justificarlo despues en el documento final.
 
@@ -332,3 +332,99 @@ Pendientes:
 - Definir el split definitivo del TFM antes de generar el dataset nnU-Net completo.
 - Decidir estrategia final de conversion: NIfTI 4D intermedio via MONAI o conversion directa propia al formato nnU-Net.
 - Definir si nnU-Net final usara `3d_fullres` en un fold, 5 folds o configuracion recomendada segun presupuesto computacional.
+
+### 2026-05-26 - Preparacion y depuracion del baseline MONAI en Colab Pro
+
+Actividad realizada: se consolida la pipeline propia MONAI/PyTorch para ejecutar el primer baseline `residual_unet_3d` en Colab Pro con GPU A100, y se depuran los problemas encontrados durante la ejecucion remota.
+
+Objetivo metodologico: pasar de pruebas locales y smoke tests a un protocolo ejecutable en un entorno GPU externo, manteniendo trazabilidad de codigo, configuraciones, splits, dependencias y artefactos minimos. Esta fase no busca todavia obtener el resultado experimental final, sino estabilizar el procedimiento que permitira entrenar el baseline y despues compararlo con las variantes de fusion.
+
+Problemas encontrados en Colab:
+
+- `pip install -r requirements/protocol.txt` fallaba porque el archivo existia localmente pero no estaba versionado en GitHub.
+- El clon de Colab tampoco incluia aun componentes necesarios del protocolo, como `tfm_brats`, `configs`, `requirements/protocol.txt` y los splits versionados.
+- El QC fallaba porque `configs/dataset/brats_gli_2024.yaml` apuntaba a la ruta local del Mac: `/Volumes/External M2/Datos/TFM-datasets`.
+- En Colab el `dataset_root` debe apuntar a la carpeta padre de Drive que contiene `training_data1_v2` y `training_data_additional`, por ejemplo `/content/drive/MyDrive/TFM-datasets`.
+- Una ejecucion de entrenamiento larga mostro infrautilizacion: tras unas 7 horas la GPU A100 no superaba aproximadamente 2 GB de memoria y la RAM del sistema rondaba 6.3 GB. Esto sugiere un cuello de botella de entrada/salida o una configuracion de entrenamiento demasiado conservadora, no falta de capacidad de la GPU.
+
+Procedimiento seguido:
+
+- Se versionaron los archivos necesarios para que un clon limpio de GitHub en Colab pueda instalar dependencias y ejecutar la pipeline.
+- Se actualizo la guia `docs/colab-pro-baseline-residual-unet.md` con comprobaciones explicitas de raiz del repositorio, presencia de `requirements/protocol.txt`, montaje de Drive y correccion de `dataset_root`.
+- Se anadio una celda reproducible para reescribir `dataset_root` dentro del YAML desde Colab usando `PyYAML`.
+- Se anadio una comprobacion previa para verificar que Colab ve `training_data1_v2` y `training_data_additional`.
+- Se acoto el entrenamiento real con `--max-steps 3000` para evitar lanzamientos abiertos sin control temporal.
+- Se optimizo la configuracion `configs/training/colab_pro.yaml` para aprovechar mejor A100: `batch_size: 2`, `amp: true`, `pin_memory: true`, `persistent_workers: true`, `prefetch_factor: 2`, `cudnn_benchmark: true`, menos epocas, validacion menos frecuente y menos batches de validacion.
+- Se modifico `tfm_brats/monai_pipeline.py` para registrar progreso en consola y CSV: velocidad, memoria GPU, batch actual, batches totales, pasos restantes y `case_id`.
+- Se dejo documentada la alternativa de copiar el dataset desde Google Drive al disco local del runtime (`/content/TFM-datasets`) si la lectura desde Drive limita el entrenamiento.
+
+Decisiones tecnicas:
+
+- Mantener Colab Pro como entorno de entrenamiento inicial para el baseline real.
+- No depender de ediciones manuales invisibles en Colab: las rutas y comprobaciones quedan documentadas con comandos copiables.
+- Usar entrenamiento acotado por pasos para la primera ejecucion real, antes de lanzar entrenamientos completos.
+- Registrar progreso de entrenamiento en `train_log.csv` y no solo en stdout, para poder diagnosticar cuellos de botella si la celda se interrumpe o si se revisa a posteriori.
+- Tratar la baja utilizacion de GPU como evidencia para priorizar optimizacion del pipeline de datos y logging antes de aumentar complejidad del modelo.
+
+Commits relacionados:
+
+- `442a55d Add BraTS baseline protocol files`: versiona pipeline, configuraciones, requirements, splits y artefactos pequenos necesarios para Colab.
+- `9792c07 Document Colab dataset root update`: documenta la correccion de `dataset_root` en Colab.
+- `bde0745 Optimize Colab training loop`: activa AMP, mejoras de `DataLoader`, logging de velocidad/memoria y una configuracion Colab mas acotada.
+- `3276a52 Log training case progress`: anade `batch_total`, `remaining_steps` y `case_ids` al log de entrenamiento.
+
+Artefactos relacionados:
+
+- `requirements/protocol.txt`
+- `configs/dataset/brats_gli_2024.yaml`
+- `configs/training/colab_pro.yaml`
+- `configs/training/local_smoke.yaml`
+- `configs/model/residual_unet_3d.yaml`
+- `outputs/splits/brats_gli_2024_seed20260526/`
+- `tfm_brats/cli.py`
+- `tfm_brats/monai_pipeline.py`
+- `docs/colab-pro-baseline-residual-unet.md`
+
+Comando actual recomendado para Colab:
+
+```bash
+%cd /content/tfm-brain-tumor-segmentation
+!git pull origin main
+!python -m tfm_brats.cli train \
+  --dataset-config configs/dataset/brats_gli_2024.yaml \
+  --model-config configs/model/residual_unet_3d.yaml \
+  --training-config configs/training/colab_pro.yaml \
+  --split-dir outputs/splits/brats_gli_2024_seed20260526 \
+  --output-dir outputs/train/residual_unet_3d \
+  --max-steps 3000 \
+  --device cuda
+```
+
+Salida esperada de progreso:
+
+```text
+train_step epoch=1 batch=3/568 step=10 remaining=2990 case_ids=BraTS-GLI-... loss=... speed=... step/s, gpu_mem=...GB
+```
+
+Validaciones realizadas en local:
+
+- `python3 -m compileall -q tfm_brats scripts/brats_cli.py tests`: correcto.
+- `.venv/bin/python -m unittest discover -s tests`: 6 tests correctos.
+- Smoke train de 1 paso en CPU con `local_smoke.yaml`: correcto; genera `train_summary.json`, `train_log.csv`, `last.pt` y `best.pt`.
+
+Evidencia metodologica generada:
+
+- La pipeline ya se puede clonar desde GitHub en Colab con los archivos necesarios.
+- El entrenamiento registra trazabilidad suficiente para diagnosticar si el cuello de botella esta en carga de datos, CPU, validacion o GPU.
+- La primera ejecucion real queda limitada por pasos, lo que facilita comparar tiempos entre variantes de configuracion sin gastar sesiones largas de Colab.
+
+Impacto en la memoria final:
+
+Esta entrada servira para justificar la estrategia de reproducibilidad practica en entorno Colab Pro: control de versiones, configuraciones YAML, splits versionados, comandos documentados, registro de logs y adaptacion del entrenamiento al hardware disponible. Tambien documenta una limitacion real del entorno: Google Drive puede introducir cuellos de botella de lectura, por lo que mover datos al disco local del runtime puede formar parte del protocolo operativo aunque no cambie el dataset experimental.
+
+Pendientes:
+
+- Relanzar el entrenamiento en Colab con el commit `3276a52` o posterior.
+- Registrar GPU exacta de `nvidia-smi`, velocidad `step/s`, memoria GPU maxima y tiempo hasta el primer `train_step`.
+- Si la velocidad sigue baja, copiar `training_data1_v2` y `training_data_additional` a `/content/TFM-datasets` y repetir con el mismo comando.
+- Conservar `train_log.csv`, `train_summary.json` y el resumen de validacion para decidir si el baseline es suficiente o si hay que ajustar `patch_size`, `batch_size`, `samples_per_case` o frecuencia de validacion.
