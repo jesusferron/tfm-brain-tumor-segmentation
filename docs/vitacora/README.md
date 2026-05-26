@@ -1,6 +1,6 @@
 # Bitacora metodologica del TFM
 
-Ultima actualizacion: 2026-05-26 (entrada vespertina: ampliacion del factory de modelos)
+Ultima actualizacion: 2026-05-27 (sanity check local del baseline en Mac M4 Pro)
 
 Este documento registra, de forma incremental, la metodologia seguida durante el TFM. Su objetivo no es duplicar la memoria final, sino conservar la trazabilidad de lo que se decide, por que se decide, como se ejecuta y que evidencia queda disponible para justificarlo despues en el documento final.
 
@@ -541,3 +541,81 @@ Pendientes:
 - Entrenar `swin_unetr` (fase 6) y registrar memoria GPU pico, `step_seconds` y necesidad o no de `use_checkpoint`.
 - Confirmar si nnU-Net externo se ejecutara con `3d_fullres` y un fold, o con configuracion recomendada por nnU-Net, antes de cerrar la comparacion.
 - Decidir si se incorpora TransBTS o se documenta como trabajo futuro.
+
+### 2026-05-27 - Sanity check local del baseline en Mac M4 Pro (MPS)
+
+Actividad realizada: se ejecuta un entrenamiento corto del baseline `residual_unet_3d` en el portatil local (MacBook Pro M4 Pro, 12 cores, 24 GB de memoria unificada) usando el backend MPS de PyTorch, para validar la pipeline end-to-end fuera de Colab y aprovechar la noche sin gastar sesion de Colab.
+
+Objetivo metodologico: no buscar metricas reportables, sino confirmar tres cosas antes de la siguiente iteracion en Colab Pro: (1) que el refactor del factory de modelos no rompio el flujo del baseline, (2) que la pipeline (carga, transforms, forward/backward, validacion sliding window, checkpointing y logging) funciona tambien en MPS, y (3) que existe senal de aprendizaje real en regiones BraTS al cabo de unos cuantos steps. La motivacion practica fue que el cuello observado en Colab era I/O de Google Drive, no computo; el M4 Pro lee desde un M.2 externo local rapido y permite comparar comportamiento de la pipeline aislando ese factor.
+
+Procedimiento seguido:
+
+- Se anade `configs/training/mac_m4_pro.yaml` con un perfil conservador adaptado a MPS: `device: mps`, `amp: false` (la pipeline ya fuerza AMP a `False` fuera de CUDA), `patch_size: [96, 96, 96]`, `batch_size: 1`, `samples_per_case: 2`, `num_workers: 6`, `persistent_workers: true`, `prefetch_factor: 2`, `pin_memory: false`, `cudnn_benchmark: false`, `validation_interval: 5`, `validation_batches: 2`.
+- Se reutiliza el split versionado `outputs/splits/brats_gli_2024_seed20260526` y el `model-config` ya existente, sin cambios.
+- Se lanza el entrenamiento envuelto en `caffeinate -dimsu` para evitar que el sistema entre en suspension y con `tee` a `outputs/train/residual_unet_3d_m4_pro_stdout.log` para conservar stdout adicional al CSV.
+
+Comando ejecutado:
+
+```bash
+caffeinate -dimsu .venv/bin/python -m tfm_brats.cli train \
+  --dataset-config configs/dataset/brats_gli_2024.yaml \
+  --model-config configs/model/residual_unet_3d.yaml \
+  --training-config configs/training/mac_m4_pro.yaml \
+  --split-dir outputs/splits/brats_gli_2024_seed20260526 \
+  --output-dir outputs/train/residual_unet_3d_m4_pro \
+  --max-steps 1500 \
+  --device mps \
+  2>&1 | tee outputs/train/residual_unet_3d_m4_pro_stdout.log
+```
+
+Comportamiento observado durante el entrenamiento:
+
+- Cold start del primer step: `data_wait=21.20s` en step 1 (carga inicial de los workers y caches frias).
+- A partir del step 10 la velocidad se estabilizo en aproximadamente `0.48 step/s`, con `compute_seconds=0.50` constante y picos esporadicos de `data_wait` de 3-11 segundos cada 50-100 steps (lecturas NIfTI desde el M.2 amortizadas por el prefetch).
+- La loss bajo de `1.25` (step 1) a una media de `0.89` con varianza alta por patch, comportamiento normal de `DiceCELoss` con cropping aleatorio en regiones BraTS.
+- Tras 1500 steps (3000 patches, 2 epochs reales sobre 1135 casos de entrenamiento), la validacion sliding window sobre 2 batches del split val produjo:
+  - `ET_dice = 0.000`
+  - `TC_dice = 0.212`
+  - `WT_dice = 0.287`
+  - `mean_dice = 0.166`
+- Validacion completa en `~30.5s` con `validation_batches=2`.
+- Tiempo total del run: aproximadamente 52 minutos.
+
+Interpretacion metodologica:
+
+- El patron `ET < TC < WT` es el esperado en un entrenamiento corto de BraTS. WT es la region mas amplia y facil de detectar (cualquier voxel tumoral cuenta); TC anade necrosis y realce; ET aisla solo el realce, que es la region mas pequena y rara y suele necesitar muchos mas pasos antes de aparecer.
+- `mean_dice=0.166` no es una metrica reportable. El estado del arte en BraTS-GLI ronda `0.85-0.90` con entrenamientos de decenas de miles de pasos, AMP, patch_size mayor y batch efectivo grande.
+- Lo que si reporta el run, y que justifica su valor metodologico, es senal de aprendizaje real (WT > 0 confirma que el modelo discrimina tumor de fondo) y validacion del flujo completo en un backend distinto al de Colab.
+
+Tambien aparecio una advertencia de PyTorch dentro de `monai.inferers.utils` por usar indexing con secuencias no-tupla (sera incompatible en PyTorch 2.9). No bloquea la ejecucion en la version actual y queda anotada como riesgo a vigilar cuando se actualice MONAI o PyTorch.
+
+Decisiones tecnicas:
+
+- Confirmar que el portatil local sirve como entorno de sanity check y diagnostico de pipeline, no como plataforma de entrenamiento final.
+- Mantener Colab Pro como entorno principal para entrenamientos serios: AMP, A100 de 40 GB, batch y patch mayores.
+- No usar el M4 Pro para `swin_unetr`: los 62M parametros sin AMP en 24 GB unificados no son una apuesta razonable. Queda explicitamente excluido.
+- Para futuras iteraciones rapidas de pipeline (smoke largos, debug de transforms, comparacion relativa de velocidad) sigue siendo util el perfil `mac_m4_pro.yaml`.
+
+Artefactos generados:
+
+- `configs/training/mac_m4_pro.yaml`
+- `outputs/train/residual_unet_3d_m4_pro/train_summary.json`
+- `outputs/train/residual_unet_3d_m4_pro/train_log.csv`
+- `outputs/train/residual_unet_3d_m4_pro/checkpoints/best.pt`
+- `outputs/train/residual_unet_3d_m4_pro/checkpoints/last.pt`
+- `outputs/train/residual_unet_3d_m4_pro_stdout.log`
+
+Limitaciones del run:
+
+- Solo una semilla y una corrida.
+- Validacion limitada a 2 batches de los 243 casos del split val. La estimacion de Dice es ruidosa.
+- Sin AMP (forzado por el codigo en backends no-CUDA) ni `cudnn_benchmark`.
+- Numero de pasos muy inferior al necesario para curvas estables de Dice por region.
+
+Impacto en la memoria final: este resultado se usara como evidencia de validacion tecnica del pipeline en un backend alternativo (MPS) y como justificacion de por que el entrenamiento experimental se reserva para A100 en Colab. Tambien refuerza la trazabilidad de decisiones reproducibles: cualquier persona con un Mac Apple Silicon puede repetir el sanity check siguiendo el mismo comando.
+
+Pendientes:
+
+- Tras el siguiente entrenamiento real en Colab (mas pasos, AMP), incorporar tabla comparativa Dice ET/TC/WT entre baseline y ablaciones de fusion.
+- Decidir si `mac_m4_pro.yaml` se promueve a smoke largo recurrente (por ejemplo, antes de cada PR que toque el pipeline) o si se mantiene como herramienta ad-hoc.
+- Vigilar la advertencia de indexing en `monai.inferers.utils` cuando se actualicen PyTorch o MONAI.
