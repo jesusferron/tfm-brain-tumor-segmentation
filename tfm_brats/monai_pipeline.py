@@ -351,12 +351,46 @@ def _checkpoint_payload(
     }
 
 
+def _flatten_batch_values(value: Any) -> list[str]:
+    if value is None:
+        return []
+    if isinstance(value, bytes):
+        return [value.decode("utf-8", errors="replace")]
+    if isinstance(value, str):
+        return [value]
+    if isinstance(value, np.ndarray):
+        return _flatten_batch_values(value.tolist())
+    if isinstance(value, (list, tuple)):
+        values: list[str] = []
+        for item in value:
+            values.extend(_flatten_batch_values(item))
+        return values
+    if hasattr(value, "detach") and hasattr(value, "cpu"):
+        try:
+            return _flatten_batch_values(value.detach().cpu().tolist())
+        except (TypeError, ValueError):
+            pass
+    return [str(value)]
+
+
+def _format_case_ids(batch: dict[str, Any], *, max_items: int = 6) -> str:
+    raw_values = _flatten_batch_values(batch.get("case_id"))
+    unique_values = list(dict.fromkeys(value for value in raw_values if value))
+    if len(unique_values) <= max_items:
+        return "|".join(unique_values)
+    shown = "|".join(unique_values[:max_items])
+    return f"{shown}|...(+{len(unique_values) - max_items})"
+
+
 def _append_log_row(log_path: Path, row: dict[str, Any], *, write_header: bool = False) -> None:
     fieldnames = [
         "event",
         "epoch",
         "step",
         "batch",
+        "batch_total",
+        "remaining_steps",
+        "case_ids",
         "loss",
         "ET_dice",
         "TC_dice",
@@ -527,6 +561,7 @@ def train_one_run(
     model.train()
     for epoch in range(max_epochs):
         epoch_losses: list[float] = []
+        train_batch_total = len(train_loader)
         for batch_index, batch in enumerate(train_loader):
             images = batch["image"].to(device, non_blocking=True)
             labels = batch["label"].to(device, non_blocking=True).float()
@@ -545,6 +580,9 @@ def train_one_run(
             losses.append(loss_value)
             epoch_losses.append(loss_value)
             global_step += 1
+            batch_number = batch_index + 1
+            remaining_steps = step_limit - global_step if step_limit is not None else ""
+            case_ids = _format_case_ids(batch)
 
             if log_every_steps > 0 and (global_step == 1 or global_step % log_every_steps == 0):
                 elapsed = perf_counter() - start_time
@@ -556,7 +594,10 @@ def train_one_run(
                         "event": "train_step",
                         "epoch": epoch + 1,
                         "step": global_step,
-                        "batch": batch_index,
+                        "batch": batch_number,
+                        "batch_total": train_batch_total,
+                        "remaining_steps": remaining_steps,
+                        "case_ids": case_ids,
                         "loss": loss_value,
                         "lr": optimizer.param_groups[0]["lr"],
                         "elapsed_seconds": elapsed,
@@ -566,7 +607,8 @@ def train_one_run(
                 )
                 gpu_text = f", gpu_mem={gpu_memory_gb:.2f}GB" if gpu_memory_gb is not None else ""
                 print(
-                    f"train_step epoch={epoch + 1} step={global_step} "
+                    f"train_step epoch={epoch + 1} batch={batch_number}/{train_batch_total} "
+                    f"step={global_step} remaining={remaining_steps} case_ids={case_ids} "
                     f"loss={loss_value:.5f} speed={steps_per_second:.3f} step/s{gpu_text}",
                     flush=True,
                 )
@@ -633,6 +675,7 @@ def train_one_run(
                     "event": "validation",
                     "epoch": epoch + 1,
                     "step": global_step,
+                    "remaining_steps": step_limit - global_step if step_limit is not None else "",
                     "loss": float(np.mean(epoch_losses)) if epoch_losses else "",
                     "ET_dice": last_validation.get("ET_dice", ""),
                     "TC_dice": last_validation.get("TC_dice", ""),
