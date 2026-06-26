@@ -2,6 +2,7 @@
 
 Fecha de envio: 2026-05-28
 Fecha de respuesta: 2026-06-25 (parcial, bloques 1 y 2; bloque 3 pendiente y varios subpuntos diferidos a reunion)
+Reunion de seguimiento: 2026-06-29 — preparacion en [`reunion-tutor-2026-06-29.md`](reunion-tutor-2026-06-29.md)
 
 Origen: tras la revision del 2026-05-18, el tutor pidio enfasis en metodologia, tablas del repositorio y tipos de imagen. Este documento recoge las preguntas enviadas y dejara registradas las respuestas para trazabilidad.
 

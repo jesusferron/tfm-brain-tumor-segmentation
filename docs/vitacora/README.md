@@ -806,3 +806,23 @@ Pendientes o riesgos abiertos:
 - Una vez resuelto el I/O en cloud, replicar la comparacion en L4/A100 con mas pasos y AMP, e incluir `swin_unetr`.
 - El split `test.csv` se reserva para la evaluacion final una vez fijada la configuracion definitiva.
 - **PENDIENTE: lanzar la evaluacion sobre el split `test.csv` (243 casos, held out).** Las metricas actuales en `outputs/evaluation/` son todas sobre `val.csv`. El Capitulo 3 de la memoria establece que las cifras finales deben reportarse sobre el conjunto de test reservado (validacion solo para monitorizacion), por lo que el Capitulo 5 sera incoherente hasta generar estas metricas. Reutilizar el flujo `predict` + `evaluate` ya existente (`scratchpad/run_predict_evaluate_5k.sh`, `scratchpad/aggregate_eval.py`) apuntando a `test.csv`, una vez fijada la configuracion definitiva de entrenamiento.
+
+## 2026-06-26 - Plan global del TFM e indice de la memoria (estructura aprobada por el tutor)
+
+Actividad realizada: analisis del estado global del TFM (no solo del codigo) y formalizacion del roadmap y de la estructura del manuscrito.
+
+Objetivo metodologico: situar los resultados experimentales dentro del contrato del TFM (criterios de exito de `decisiones-iniciales.md §10`) y ordenar el trabajo restante por dependencias, antes de gastar mas computo.
+
+Procedimiento y hallazgos:
+
+- Contraste del estado actual con los tres niveles de exito: el TFM supera el nivel **minimo** (pipeline reproducible + baseline 3D + evaluacion interna), pero faltan 2 de los 3 pilares del **objetivo defendible**: el modelo Transformer-UNet (Swin-UNETR, que da nombre al TFM) sin entrenar, y nnU-Net (baseline fuerte) solo con smoke test. El tercer pilar (ablacion de fusion) esta en duda por el bajo rendimiento de `adaptive_gating`.
+- Adopcion de la estructura de manuscrito aprobada por el tutor (CON-2026-05-28-M1, recibida 2026-06-25): Introduccion, Marco teorico y estado del arte, Metodologia (fases de alto nivel), Desarrollo (detalle tecnico), Resultados, Conclusiones.
+- Identificacion de un desajuste a corregir: el Capitulo 3 actual contiene detalle tecnico que, segun el criterio del tutor, corresponde al Capitulo 4. Pendiente de confirmar el reparto exacto en la reunion.
+
+Artefactos generados:
+
+- `docs/memoria/indice-memoria.md` (indice maestro de los 6 capitulos, con estado y material de partida).
+- `docs/memoria/plan-tfm.md` (roadmap completo: criterios de exito, track experimental, track de redaccion, dependencias y riesgos).
+- Nota en `docs/memoria/README.md` marcandolo como material legado y apuntando al indice y al plan.
+
+Pendientes o riesgos abiertos: los registrados en `plan-tfm.md` (riesgo titulo vs. evidencia por Swin sin entrenar; contribucion en duda por `adaptive_gating`; resultados aun preliminares sobre val). Inmediato sin computo: actualizar el README maestro e ir preparando los inputs de la reunion con el tutor.

@@ -4,6 +4,14 @@ Ultima actualizacion: 2026-05-26
 
 Titulo de trabajo: **Segmentacion de tumores cerebrales en resonancia magnetica multimodal mediante arquitecturas Transformer-UNet hibridas**.
 
+> **Nota (2026-06-26):** la estructura del manuscrito y el estado por capitulo se gestionan ahora
+> en [`indice-memoria.md`](indice-memoria.md) (indice maestro de los 6 capitulos aprobados por el
+> tutor), y el roadmap completo del proyecto en [`plan-tfm.md`](plan-tfm.md). Este README pasa a
+> ser **material de trabajo legado**: sus tablas de dataset, estructura del repositorio y aspectos
+> legales siguen siendo validas como fuente, pero deben migrarse a los capitulos correspondientes.
+> Varias secciones marcadas aqui como "Pendiente" ya estan hechas (splits versionados,
+> entrenamiento, evaluacion); el estado real esta en `indice-memoria.md` y en la vitacora.
+
 Este documento centraliza la memoria del TFM en construccion. No sustituye a la plantilla final de la universidad, pero organiza el contenido tecnico que ya esta decidido o parcialmente validado en el repositorio. La prioridad actual es consolidar el capitulo de metodologia, las tablas sobre el repositorio/dataset y la descripcion del tipo de imagen, porque son elementos que deben quedar claros antes de entrenar modelos.
 
 ## Evaluacion de la peticion del tutor
