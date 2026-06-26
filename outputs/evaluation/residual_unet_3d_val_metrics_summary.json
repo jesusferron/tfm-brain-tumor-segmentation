@@ -1,0 +1,43 @@
+{
+  "aggregates": {
+    "ET_dice": {
+      "count": 243,
+      "finite_count": 243,
+      "mean": 0.36103265766178366,
+      "median": 0.2847428942715967
+    },
+    "ET_hd95": {
+      "count": 243,
+      "finite_count": 184,
+      "mean": 23.04518300248436,
+      "median": 11.112486080160913
+    },
+    "TC_dice": {
+      "count": 243,
+      "finite_count": 243,
+      "mean": 0.6679800805749398,
+      "median": 0.7421256378673236
+    },
+    "TC_hd95": {
+      "count": 243,
+      "finite_count": 233,
+      "mean": 20.819182847847745,
+      "median": 6.557438524302
+    },
+    "WT_dice": {
+      "count": 243,
+      "finite_count": 243,
+      "mean": 0.7920161248460186,
+      "median": 0.8410518002563472
+    },
+    "WT_hd95": {
+      "count": 243,
+      "finite_count": 243,
+      "mean": 20.463999953356517,
+      "median": 5.477225575051661
+    }
+  },
+  "cases": 243,
+  "output_csv": "outputs/evaluation/residual_unet_3d_val_metrics.csv",
+  "predictions_dir": "outputs/predictions/residual_unet_3d_val_5k"
+}

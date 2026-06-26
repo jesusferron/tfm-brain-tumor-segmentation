@@ -1,0 +1,38 @@
+=== ESPERANDO fin de la corrida 5k (Fri Jun 26 09:29:13 CEST 2026) ===
+Corrida 5k terminada (Fri Jun 26 10:20:44 CEST 2026).
+
+=== START predict+evaluate Fri Jun 26 10:20:44 CEST 2026 | val=     244 lineas ===
+
+>>> [Fri Jun 26 10:20:44 CEST 2026] residual_unet_3d
+  predict -> outputs/predictions/residual_unet_3d_val_5k
+  evaluate -> outputs/evaluation/residual_unet_3d_val_metrics_summary.json
+  OK residual_unet_3d
+
+>>> [Fri Jun 26 10:32:01 CEST 2026] residual_unet_3d_global_weighted
+  predict -> outputs/predictions/residual_unet_3d_global_weighted_val_5k
+  evaluate -> outputs/evaluation/residual_unet_3d_global_weighted_val_metrics_summary.json
+  OK residual_unet_3d_global_weighted
+
+>>> [Fri Jun 26 10:43:28 CEST 2026] residual_unet_3d_adaptive_gating
+  predict -> outputs/predictions/residual_unet_3d_adaptive_gating_val_5k
+  evaluate -> outputs/evaluation/residual_unet_3d_adaptive_gating_val_metrics_summary.json
+  OK residual_unet_3d_adaptive_gating
+
+>>> [Fri Jun 26 10:54:57 CEST 2026] attention_unet_3d
+  predict -> outputs/predictions/attention_unet_3d_val_5k
+  evaluate -> outputs/evaluation/attention_unet_3d_val_metrics_summary.json
+  OK attention_unet_3d
+
+=== AGREGANDO tabla comparativa ===
+
+=== Comparativa val (5000 pasos, 243 casos) ===
+modelo                meanDice      ET      TC      WT |  ET_hd95  TC_hd95  WT_hd95
+-----------------------------------------------------------------------------------
+baseline (concat)       0.6070   0.361   0.668   0.792 |    23.05    20.82    20.46
+global_weighted         0.6058   0.371   0.657   0.790 |    20.46    18.21    18.01
+adaptive_gating         0.5881   0.360   0.631   0.774 |    28.43    26.41    25.15
+attention               0.6546   0.452   0.698   0.814 |    22.24    19.69    18.74
+
+CSV: /Users/jesusferron-personal/Repository/tfm-brain-tumor-segmentation/outputs/evaluation/comparativa_val_5k.csv
+
+=== DONE Fri Jun 26 11:13:13 CEST 2026 ===

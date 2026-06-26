@@ -23,3 +23,6 @@ outputs/**/*.pth
 .venv/
 __pycache__/
 *.py[cod]
+
+# macOS filesystem metadata.
+.DS_Store

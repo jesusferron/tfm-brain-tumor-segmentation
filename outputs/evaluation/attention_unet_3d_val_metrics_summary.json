@@ -1,0 +1,43 @@
+{
+  "aggregates": {
+    "ET_dice": {
+      "count": 243,
+      "finite_count": 243,
+      "mean": 0.4519244059351223,
+      "median": 0.5153249395904871
+    },
+    "ET_hd95": {
+      "count": 243,
+      "finite_count": 183,
+      "mean": 22.2436735757919,
+      "median": 7.0710678118654755
+    },
+    "TC_dice": {
+      "count": 243,
+      "finite_count": 243,
+      "mean": 0.6978702500742121,
+      "median": 0.7875505152021666
+    },
+    "TC_hd95": {
+      "count": 243,
+      "finite_count": 233,
+      "mean": 19.68969656729404,
+      "median": 7.0710678118654755
+    },
+    "WT_dice": {
+      "count": 243,
+      "finite_count": 243,
+      "mean": 0.8141256864835794,
+      "median": 0.8748287569241765
+    },
+    "WT_hd95": {
+      "count": 243,
+      "finite_count": 243,
+      "mean": 18.74107114576387,
+      "median": 4.58257569495584
+    }
+  },
+  "cases": 243,
+  "output_csv": "outputs/evaluation/attention_unet_3d_val_metrics.csv",
+  "predictions_dir": "outputs/predictions/attention_unet_3d_val_5k"
+}

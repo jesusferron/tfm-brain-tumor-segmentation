@@ -1,0 +1,36 @@
+training:
+  # Corrida real local (M4 Pro, MPS, 128^3) de los 4 modelos pequenos: baseline
+  # concat + 2 ablaciones de fusion + attention. 5000 pasos por modelo.
+  # Derivado de mac_m4_pro_128.yaml. Diferencias y justificacion en
+  # docs/vitacora/README.md (entrada 2026-06-25, corrida real de 5000 pasos):
+  #   - validation_interval 5 -> 1: 5000 pasos son ~4.4 epocas; validar cada
+  #     epoca da curva de Dice y seleccion real de best.pt (con el valor previo
+  #     solo se validaria al final y best.pt = last.pt).
+  #   - validation_batches 2 -> 8: seleccion de best.pt menos ruidosa. La
+  #     evaluacion reportable definitiva se hace aparte (predict + evaluate).
+  # swin_unetr sigue excluido en local a 128^3 (~124 s/paso).
+  seed: 20260526
+  device: mps
+  patch_size: [128, 128, 128]
+  divisible_k: 16
+  sliding_window_roi_size: [128, 128, 128]
+  sliding_window_batch_size: 1
+  sliding_window_overlap: 0.25
+  prediction_threshold: 0.5
+  samples_per_case: 2
+  positive_crop_ratio: 1.0
+  negative_crop_ratio: 1.0
+  batch_size: 1
+  num_workers: 6
+  pin_memory: false
+  persistent_workers: true
+  prefetch_factor: 2
+  amp: false
+  cudnn_benchmark: false
+  max_epochs: 30
+  max_steps: 5000
+  validation_batches: 8
+  validation_interval: 1
+  log_every_steps: 10
+  learning_rate: 0.0001
+  weight_decay: 0.00001

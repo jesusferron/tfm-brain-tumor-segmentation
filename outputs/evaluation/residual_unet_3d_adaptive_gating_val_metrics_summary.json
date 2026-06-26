@@ -1,0 +1,43 @@
+{
+  "aggregates": {
+    "ET_dice": {
+      "count": 243,
+      "finite_count": 243,
+      "mean": 0.3595293028828574,
+      "median": 0.2733039021667428
+    },
+    "ET_hd95": {
+      "count": 243,
+      "finite_count": 183,
+      "mean": 28.429673732349716,
+      "median": 13.341664064126334
+    },
+    "TC_dice": {
+      "count": 243,
+      "finite_count": 243,
+      "mean": 0.6307937477459865,
+      "median": 0.7110049009680425
+    },
+    "TC_hd95": {
+      "count": 243,
+      "finite_count": 233,
+      "mean": 26.407930594133596,
+      "median": 11.357816691600547
+    },
+    "WT_dice": {
+      "count": 243,
+      "finite_count": 243,
+      "mean": 0.7740695162433419,
+      "median": 0.8349015736132659
+    },
+    "WT_hd95": {
+      "count": 243,
+      "finite_count": 243,
+      "mean": 25.148681839781403,
+      "median": 6.782329983125268
+    }
+  },
+  "cases": 243,
+  "output_csv": "outputs/evaluation/residual_unet_3d_adaptive_gating_val_metrics.csv",
+  "predictions_dir": "outputs/predictions/residual_unet_3d_adaptive_gating_val_5k"
+}
