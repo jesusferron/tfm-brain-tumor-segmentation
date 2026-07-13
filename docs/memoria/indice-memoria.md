@@ -37,19 +37,23 @@ describe el *proceso/fases* (metodología ágil, cronograma), nunca las técnica
 técnico vive en Desarrollo. Refuerza la necesidad de re-nivelar el capítulo 3. Detalle en la
 [guía de estilo](guia-estilo-y-estructura.md).
 
-- **Acción pendiente:** re-nivelar el capítulo 3 a fases de alto nivel y trasladar el detalle
-  técnico al capítulo 4, evitando duplicación.
-- **Confirmar el reparto exacto en la reunión** (tema 1 de la reunión pendiente; ver
-  [`consulta-tutor-2026-05-28.md`](../pre-design/consulta-tutor-2026-05-28.md)). No se invierte
-  esfuerzo grande en la reestructuración hasta confirmarlo.
+- **Reparto validado por el tutor (2026-07-13):** se re-nivela el capítulo 3 a fases de alto nivel
+  y el detalle técnico se traslada al capítulo 4, evitando duplicación. Ya se puede acometer la
+  reestructuración sin esperar más confirmación.
+- **Acción pendiente:** ejecutar esa re-nivelación en `capitulo-3-metodologia.md` y
+  `capitulo-4-desarrollo.md`.
 
-## Pendiente de la reunión con el tutor
+## Decisiones de la reunión con el tutor (2026-07-13)
 
-Bloquea o condiciona varias decisiones de redacción (ver consulta 2026-05-28):
+Reunión celebrada; cerradas las decisiones que condicionaban la redacción (detalle en
+[`reunion-tutor-2026-06-29.md`](../pre-design/reunion-tutor-2026-06-29.md)):
 
-1. Reparto exacto Metodología/Desarrollo.
-2. Nivel de detalle objetivo (justificación clínica/técnica, pseudocódigo, diagramas de flujo).
-3. Referencias o TFM modelo para estilo y profundidad.
-4. Columnas (aspectos evaluados) de la tabla comparativa de repositorios.
-5. Tres preguntas del bloque de tipos de imagen (caracterización clínica por modalidad,
-   ejemplos visuales en la memoria, ubicación de la justificación para excluir BraTS-MEN-RT).
+1. **Reparto Metodología/Desarrollo:** validado (cap. 3 fases de alto nivel; detalle al cap. 4).
+2. **Nivel de detalle:** confirmado (justificación clínica/técnica + diagramas de flujo y
+   arquitectura; pseudocódigo solo cuando aporte).
+3. **Referencias / TFM modelo:** ya resuelto con los ejemplos de Drive y la guía de estilo.
+4. **Tabla comparativa de repositorios:** una sola tabla; columnas mínimas a criterio propio (sin
+   ejemplo adicional del tutor).
+5. **Tipos de imagen:** basta una tabla modalidad→tejido/lesión y relevancia para ET/TC/WT;
+   ejemplos visuales sí, con propósito ilustrativo y analítico; exclusión de BraTS-MEN-RT justificada
+   en el capítulo de tipos de imagen/dataset.

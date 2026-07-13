@@ -166,8 +166,31 @@ Ya cerradas por el alumno (se informan al tutor, no se debaten salvo objeción):
 
 Pendientes de cerrar EN la reunión:
 
-- [ ] A.2-bis Acordar los **límites de tiempo/coste** para la exploración de la fusión adaptativa.
-- [ ] B.1 Reparto Metodología/Desarrollo (validar la propuesta).
-- [ ] C Columnas y formato de la tabla comparativa (pedir ejemplo del tutor).
-- [ ] D.1 Nivel de caracterización clínica por modalidad.
-- [ ] D.2 Ejemplos visuales en la memoria: ¿sí/no, cuántos, con qué propósito?
+- [x] A.2-bis Acordar los **límites de tiempo/coste** para la exploración de la fusión adaptativa.
+- [x] B.1 Reparto Metodología/Desarrollo (validar la propuesta).
+- [x] C Columnas y formato de la tabla comparativa (pedir ejemplo del tutor).
+- [x] D.1 Nivel de caracterización clínica por modalidad.
+- [x] D.2 Ejemplos visuales en la memoria: ¿sí/no, cuántos, con qué propósito?
+
+## Resultado de la reunión (registrado 2026-07-13)
+
+Reunión ya celebrada. Decisiones acordadas con el tutor:
+
+- **A.1 — Secuencia experimental:** el tutor **valida** la secuencia arreglo de I/O →
+  Swin-UNETR (L4/A100) → nnU-Net. El track experimental en cloud sigue adelante tal cual.
+- **A.2-bis — Límite para la fusión adaptativa:** presupuesto de **2-3 días de ejecución** para
+  agotar las vías (corridas largas + ajuste de la compuerta). Superado ese límite sin mejora, se
+  puede reportar el resultado como negativo defendible.
+- **A.3 — Evaluación en test:** **confirmado**. El hold-out de test solo se toca una vez congelada
+  la configuración final de entrenamiento.
+- **B.1 — Reparto Metodología/Desarrollo:** **validado**. Se aligera el capítulo 3 a fases de alto
+  nivel y el detalle técnico se consolida en el capítulo 4, como estaba propuesto.
+- **B.2 — Nivel de detalle:** **confirmado** (justificación clínica/técnica + diagramas de flujo y
+  arquitectura; pseudocódigo solo cuando aporte).
+- **C — Tabla comparativa:** **una sola tabla** (no separar frameworks e implementaciones). Sin más
+  feedback sobre columnas ni ejemplo del tutor; se lleva la versión mínima viable a criterio propio.
+- **D.1 — Caracterización clínica:** **basta una tabla** que relacione cada modalidad (T1n, T1c,
+  T2w, T2f) con el tejido/lesión que realza y su relevancia para ET/TC/WT. No se exige descripción
+  radiológica extensa.
+- **D.2 — Ejemplos visuales:** **sí**, se incluyen cortes en la memoria, con propósito **ilustrativo
+  y analítico** (ambos). Número concreto a criterio propio.

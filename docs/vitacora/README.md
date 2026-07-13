@@ -1,6 +1,6 @@
 # Bitacora metodologica del TFM
 
-Ultima actualizacion: 2026-06-26 (corrida real local de 5000 pasos, evaluacion sobre val y comparativa de estrategias de fusion)
+Ultima actualizacion: 2026-07-13 (reunion con el tutor: decisiones cerradas sobre limites de la fusion adaptativa, secuencia experimental, reparto Metodologia/Desarrollo y estructura de la memoria)
 
 Este documento registra, de forma incremental, la metodologia seguida durante el TFM. Su objetivo no es duplicar la memoria final, sino conservar la trazabilidad de lo que se decide, por que se decide, como se ejecuta y que evidencia queda disponible para justificarlo despues en el documento final.
 
@@ -826,3 +826,27 @@ Artefactos generados:
 - Nota en `docs/memoria/README.md` marcandolo como material legado y apuntando al indice y al plan.
 
 Pendientes o riesgos abiertos: los registrados en `plan-tfm.md` (riesgo titulo vs. evidencia por Swin sin entrenar; contribucion en duda por `adaptive_gating`; resultados aun preliminares sobre val). Inmediato sin computo: actualizar el README maestro e ir preparando los inputs de la reunion con el tutor.
+
+## 2026-07-13 - Reunion con el tutor: cierre de decisiones estrategicas y de estructura
+
+Actividad realizada: se celebra la reunion con el tutor preparada en `docs/pre-design/reunion-tutor-2026-06-29.md` y se cierran las decisiones que quedaban abiertas (bloques A, B, C y D).
+
+Objetivo metodologico: desbloquear el track de redaccion (reparto Metodologia/Desarrollo, tabla comparativa, capitulo de tipos de imagen) y fijar el limite operativo de la exploracion de la fusion adaptativa, para poder retomar el trabajo con criterios acordados y no interpretados.
+
+Decisiones acordadas:
+
+- Secuencia experimental (A.1): validada. Se mantiene arreglo de I/O -> Swin-UNETR en L4/A100 -> nnU-Net como baseline fuerte.
+- Limite de la fusion adaptativa (A.2-bis): presupuesto de 2-3 dias de ejecucion para agotar las vias (corridas largas + ajuste de la compuerta: warmup, lr especifico, regularizacion). Si tras ese presupuesto no hay mejora sobre el baseline concat, se reporta como resultado negativo defendible. Este limite acota la restriccion previa del alumno de "no aceptar resultado negativo hasta agotar vias".
+- Evaluacion en test (A.3): confirmada. El split `test.csv` (held out) solo se evalua una vez congelada la configuracion definitiva de entrenamiento; hasta entonces solo se usa `val.csv` para monitorizacion.
+- Reparto Metodologia/Desarrollo (B.1): validado. El capitulo 3 se aligera a fases de alto nivel (familiarizacion, diseno experimental, protocolo de evaluacion) y el detalle tecnico se consolida en el capitulo 4, eliminando la duplicacion actual (§3.4≈§4.2, §3.5≈§4.5).
+- Nivel de detalle (B.2): confirmado. Justificacion clinica/tecnica de cada decision, diagramas de flujo de la pipeline y de arquitectura de los modelos, y pseudocodigo solo cuando aporte sobre la prosa.
+- Tabla comparativa de repositorios (C): una sola tabla (no se separan frameworks e implementaciones). El tutor no dio feedback adicional sobre columnas ni facilito un ejemplo propio; se lleva la version minima viable a criterio del alumno.
+- Caracterizacion clinica por modalidad (D.1): basta una tabla que relacione cada modalidad (`t1n`, `t1c`, `t2w`, `t2f`) con el tejido/lesion que realza y su relevancia para ET/TC/WT; no se exige descripcion radiologica extensa con referencias clinicas.
+- Ejemplos visuales (D.2): se incluyen cortes en la memoria con proposito ilustrativo y analitico (ambos); el numero concreto queda a criterio del alumno.
+
+Impacto en la memoria final: estas decisiones fijan la estructura de los capitulos 3, 4 y del capitulo de tipos de imagen/dataset, el formato de la tabla comparativa del estado del arte y el criterio para cerrar el estudio de ablacion. Se actualizan en consecuencia `docs/pre-design/reunion-tutor-2026-06-29.md`, `docs/memoria/plan-tfm.md` y `docs/memoria/indice-memoria.md`.
+
+Pendientes o riesgos abiertos:
+
+- Track B (sin computo): re-nivelar el capitulo 3 a fases de alto nivel trasladando el detalle al capitulo 4; actualizar el README maestro; completar la tabla comparativa (una tabla, columnas minimas); anadir tabla modalidad->tejido/lesion y seleccionar los cortes axiales ilustrativos/analiticos.
+- Track A (computo): implementar el arreglo de I/O y ejecutar la secuencia Swin-UNETR -> nnU-Net; dedicar el presupuesto de 2-3 dias a estabilizar `adaptive_gating` antes de concluir; corrida final multi-semilla y evaluacion sobre `test.csv`.

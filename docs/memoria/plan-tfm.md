@@ -3,7 +3,9 @@
 > Roadmap del proyecto hasta la entrega, anclado a los criterios de éxito de
 > [`decisiones-iniciales.md §10`](../pre-design/decisiones-iniciales.md) y a la estructura de
 > manuscrito aprobada por el tutor ([índice](indice-memoria.md)).
-> Última revisión: 2026-06-26. No hay restricción fuerte de calendario
+> Última revisión: 2026-07-13 (tras la reunión con el tutor; decisiones en
+> [`reunion-tutor-2026-06-29.md`](../pre-design/reunion-tutor-2026-06-29.md) y
+> [vitácora 2026-07-13](../vitacora/README.md)). No hay restricción fuerte de calendario
 > (`decisiones-iniciales.md`), por lo que el plan se ordena por dependencias, no por fechas.
 
 ## 1. Criterios de éxito y estado
@@ -31,8 +33,9 @@ actual de la fusión adaptativa.
 - **Swin-UNETR y nnU-Net son obligatorios** para el scope/título; no se reformula el alcance. El
   track experimental en cloud no es opcional.
 - **No se acepta un resultado negativo** de la fusión adaptativa hasta agotar todas las vías dentro
-  del alcance (con límites de tiempo y coste a acordar con el tutor). Esto fija la estrategia del
-  pilar de ablación: invertir en corridas largas + ajuste de la compuerta antes de concluir.
+  del alcance. Límite acordado con el tutor (2026-07-13): **2-3 días de ejecución** (corridas largas
+  + ajuste de la compuerta: warmup, lr específico, regularización). Superado ese presupuesto sin
+  mejora sobre el baseline concat, se puede reportar como resultado negativo defendible.
 
 ## 2. Track A — Experimental (cómputo)
 
@@ -73,20 +76,24 @@ Tareas transversales:
 
 ## 4. Dependencias y secuenciación
 
-- Hay una **reunión con el tutor pendiente** que condiciona varias decisiones de redacción
-  (reparto Metodología/Desarrollo, nivel de detalle, formato de la tabla T1, tipos de imagen).
-  No conviene invertir fuerte en capítulos cuya estructura el tutor va a ajustar.
+- **Reunión con el tutor celebrada (2026-07-13):** cerradas las decisiones que condicionaban la
+  redacción — reparto Metodología/Desarrollo (validado), nivel de detalle (confirmado), tabla T1
+  (una sola tabla), tipos de imagen (tabla modalidad→tejido + ejemplos visuales). Ya no hay bloqueo
+  del tutor para avanzar en los capítulos. Detalle en
+  [`reunion-tutor-2026-06-29.md`](../pre-design/reunion-tutor-2026-06-29.md).
 - El **arreglo de I/O** no depende del tutor y es prerrequisito de Swin + nnU-Net + finales.
 - `adaptive_gating` define la narrativa (positiva vs negativa) pero no urge hasta poder hacer una
   corrida larga limpia (tras el I/O), salvo que se quiera diagnosticar ya en local.
 
 ### Orden recomendado (dos frentes en paralelo, sin trabajo desperdiciado)
 
-**Inmediato (Track B, cero cómputo, destraba al tutor):**
+**Inmediato (Track B, cero cómputo):**
 - [x] Índice maestro de los 6 capítulos.
+- [x] Inputs de la reunión y reunión celebrada (2026-07-13); decisiones cerradas.
+- [ ] Re-nivelar el cap. 3 a fases de alto nivel y trasladar el detalle técnico al cap. 4.
 - [ ] Actualizar el README maestro.
-- [ ] Inputs de la reunión: propuesta de reparto cap. 3/4, columnas de la tabla T1, reformular las
-      3 preguntas de tipos de imagen.
+- [ ] Completar la tabla comparativa (una sola tabla, columnas mínimas).
+- [ ] Cap. tipos de imagen: tabla modalidad→tejido/lesión + selección de cortes ilustrativos/analíticos.
 
 **En cuanto se decida gastar GPU (Track A, ruta crítica):**
 - [ ] Arreglo de I/O (cache MONAI + copia a runtime).
