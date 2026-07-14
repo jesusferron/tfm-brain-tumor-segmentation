@@ -368,9 +368,9 @@ Recomendaciones por arquitectura:
 
 ## 7c. Optimizacion De I/O (recomendado antes del entrenamiento real)
 
-En corridas anteriores el A100 estaba infrautilizado: el `compute` por paso era ~0.5 s pero `data_wait` presentaba picos de 3-11 s cada pocos pasos. El cuello no era la GPU sino la lectura de NIfTI desde Google Drive (ver [vitacora 2026-06-25](vitacora/README.md)). Hay dos optimizaciones complementarias; conviene aplicar las dos.
+En corridas anteriores el A100 estaba infrautilizado: el `compute` por paso era ~0.5 s pero `data_wait` presentaba picos de 3-11 s cada pocos pasos. El cuello no era la GPU sino la lectura de NIfTI desde Google Drive (ver [vitacora 2026-06-25](vitacora/README.md)).
 
-**1) Copiar el dataset al disco local del runtime.** Drive es lento por acceso aleatorio. Copia los roots supervisados a `/content` (disco local del runtime) una sola vez por sesion:
+**El arreglo es copiar el dataset al disco local del runtime.** Drive es lento por acceso aleatorio; el disco local (`/content`) es SSD y las lecturas son rapidas. En las corridas locales del M4 (dataset en SSD, sin cache) `data_wait_seconds` ya se mantenia en ~0 tras calentar los workers, asi que copiar a `/content` basta para eliminar el cuello. Hazlo una vez por sesion:
 
 ```bash
 !mkdir -p /content/TFM-datasets
@@ -384,17 +384,11 @@ Y apunta `dataset_root` al disco local (misma celda del paso 5):
 dataset_root = "/content/TFM-datasets"
 ```
 
-**2) Cachear el preprocesado en disco local (`cache_mode: persistent`).** `configs/training/colab_pro.yaml` ya trae `cache_mode: persistent` y `cache_dir: /content/tfm_cache/colab_pro`. Con esto, MONAI ejecuta el prefijo determinista de las transforms (carga NIfTI + normalizacion de intensidad + padding) **una sola vez por caso** y guarda el resultado en `cache_dir`; a partir de la segunda epoca, cada caso se sirve desde disco local en lugar de releer y renormalizar. Las transforms aleatorias (crop, flips) se siguen aplicando en cada paso, asi que la augmentation no se ve afectada.
+La copia ocupa unos ~30 GB, holgada en el disco de Colab (~235 GB).
 
-Requisitos e implicaciones del cache persistente:
+**Por que NO se usa cache de preprocesado (`cache_mode`) en cloud.** MONAI puede cachear el prefijo determinista de las transforms, pero cachear el split completo (imagen 4 canales float32 a resolucion completa, ~150 MB por caso x ~1378 casos) ocupa **~200 GB** y agota el disco de Colab (fallo real observado: sin espacio hacia el paso ~1090). Por eso las configs de cloud usan `cache_mode: none`: con el dataset ya en disco local, la cache no aporta y solo consume disco. La cache seria util si el dataset viviese en almacenamiento lento y hubiese disco de sobra, que no es el caso aqui.
 
-- `cache_dir` debe estar en disco local del runtime (`/content/...`), **nunca** en Drive; si apunta a Drive, el cache seria tan lento como el problema que intenta resolver.
-- El cache se invalida solo si cambian las transforms o las rutas de entrada (por eso conviene fijar `dataset_root` antes de la primera epoca).
-- Ocupa espacio en `/content` (volumenes preprocesados). Si el runtime se queda sin disco, reduce el split o borra `cache_dir`.
-- Alternativa en RAM: `cache_mode: memory` con `cache_rate` (fraccion cacheada) o `cache_num`. No cabe el split completo de train en RAM, asi que solo es util con `cache_rate` bajo; para BraTS-GLI el modo `persistent` es la opcion recomendada.
-- Modo por defecto en los perfiles locales (`mac_m4_pro*.yaml`): `none` (sin cache). En local el dataset ya vive en SSD y no hay cuello de I/O, por lo que el cache no aporta.
-
-Tras la primera epoca, vuelve a mirar `train_log.csv`: `data_wait_seconds` deberia caer a valores cercanos a 0 y `steps_per_second` subir. Ese es el indicador de que el I/O ha dejado de ser el limitante.
+Tras la primera epoca, mira `train_log.csv`: con el dataset en local, `data_wait_seconds` debe estar cerca de 0 y `steps_per_second` alto. Ese es el indicador de que el I/O no es el limitante.
 
 ## 8. Entrenamiento Real
 
@@ -428,13 +422,13 @@ Puedes monitorizar desde otra celda:
 !tail -n 20 outputs/train/residual_unet_3d/train_log.csv
 ```
 
-Si `data_wait` sigue dominando a `compute`, es que no se aplico (o no surtio efecto) la optimizacion de I/O de la seccion 7c: confirma que copiaste el dataset a `/content/TFM-datasets`, que `dataset_root` apunta ahi y que `cache_dir` esta en disco local del runtime. Recuerda que la primera epoca todavia paga la lectura inicial (mientras se construye el cache); la mejora se nota a partir de la segunda.
+Si `data_wait` sigue dominando a `compute`, es que no se aplico (o no surtio efecto) la optimizacion de I/O de la seccion 7c: confirma que copiaste el dataset a `/content/TFM-datasets` y que `dataset_root` apunta ahi (no a Drive). La primera epoca todavia paga la descompresion inicial de cada NIfTI; la lectura se estabiliza a partir de la segunda.
 
 ## 8b. Perfil L4 Y Swin-UNETR (Transformer-UNet)
 
-Segun la decision de hardware de la vitacora (2026-06-25), **L4 (24 GB) es la GPU de desarrollo/optimizacion** y A100 se reserva para las corridas finales largas. Para trabajar en L4 se usa el perfil `configs/training/colab_l4.yaml`, que ya trae `cache_mode: persistent` (con `cache_dir: /content/tfm_cache/colab_l4`) y `batch_size: 1` para que quepa el modelo mas pesado.
+Segun la decision de hardware de la vitacora (2026-06-25), **L4 (24 GB) es la GPU de desarrollo/optimizacion** y A100 se reserva para las corridas finales largas. Para trabajar en L4 se usa el perfil `configs/training/colab_l4.yaml`, que trae `cache_mode: none` y `batch_size: 1` para que quepa el modelo mas pesado.
 
-En Runtime > Change runtime type, elige `L4` si esta disponible. Aplica antes la optimizacion de I/O de la seccion 7c (copia a `/content` + cache persistente).
+En Runtime > Change runtime type, elige `L4` si esta disponible. Aplica antes la optimizacion de I/O de la seccion 7c (copia del dataset a `/content`).
 
 Swin-UNETR es el Transformer-UNet que da nombre al TFM (62M parametros). En L4 (24 GB) hay que activar gradient checkpointing, ya incluido en `configs/model/swin_unetr_l4.yaml` (`use_checkpoint: true`), que intercambia computo por memoria para que quepa a patch 128.
 

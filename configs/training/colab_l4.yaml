@@ -19,10 +19,12 @@ training:
   pin_memory: true
   persistent_workers: true
   prefetch_factor: 2
-  # I/O fix: cache the deterministic transform prefix to LOCAL runtime disk
-  # (never Drive). See docs/colab-pro-baseline-residual-unet.md section 7c.
-  cache_mode: persistent
-  cache_dir: /content/tfm_cache/colab_l4
+  # I/O fix: copy the dataset to the runtime's LOCAL disk (/content) and read
+  # from there with no cache. Local SSD reads already drive data_wait ~0 (as in
+  # the local M4 runs), so persistent caching is NOT used here: caching the full
+  # preprocessed split (~150 MB/case x ~1378 cases ~= 200 GB) overflows Colab's
+  # ~235 GB disk. See docs/colab-pro-baseline-residual-unet.md section 7c.
+  cache_mode: none
   amp: true
   cudnn_benchmark: true
   max_epochs: 30

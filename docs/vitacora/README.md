@@ -1,6 +1,6 @@
 # Bitacora metodologica del TFM
 
-Ultima actualizacion: 2026-07-14 (baseline fuerte nnU-Net: conversor directo del split completo al formato nnU-Net v2 y flujo documentado de entrenamiento/evaluacion en cloud)
+Ultima actualizacion: 2026-07-14 (correccion del arreglo de I/O: el cache persistente del split completo agota el disco de Colab; se pasa a copia del dataset a disco local sin cache)
 
 Este documento registra, de forma incremental, la metodologia seguida durante el TFM. Su objetivo no es duplicar la memoria final, sino conservar la trazabilidad de lo que se decide, por que se decide, como se ejecuta y que evidencia queda disponible para justificarlo despues en el documento final.
 
@@ -975,3 +975,28 @@ Pendientes o riesgos abiertos:
 - Confirmar que `nnUNetv2_plan_and_preprocess --verify_dataset_integrity` acepta el dataset generado (esperado, etiquetas declaradas y consecutivas); si detecta algo, ajustar `dataset.json`.
 - Decidir, a la vista del tiempo real, si se sube a 1000 epocas o se mantiene 250 para el baseline reportable.
 - Evaluacion final sobre `test` solo con la configuracion congelada (regenerar `imagesTs` con `--test-split test.csv`).
+
+## 2026-07-14 - Correccion del arreglo de I/O: cache persistente agota el disco de Colab
+
+Actividad realizada: durante el primer entrenamiento real de Swin-UNETR en L4 (paso ~1090 de la corrida de 5000), Colab reporto disco casi lleno (188 GB de 235 GB). Se diagnostica la causa y se revisa la estrategia de I/O introducida el 2026-07-14.
+
+Diagnostico: el fallo lo causa el cache persistente (`cache_mode: persistent`) sobre el split completo. `PersistentDataset` guarda el prefijo determinista de las transforms (imagen de 4 canales float32 a resolucion completa + label de 3 canales) como `.pt`, ~150 MB por caso (medido en la verificacion local: 144 MB/caso). Con 1135 casos de train + 243 de val (~1378), el cache ocupa ~200 GB, que sumado a la copia del dataset y al sistema agota el disco de Colab (~235 GB). Era el riesgo anotado en la entrada de I/O del 2026-07-14, ahora materializado a escala completa.
+
+Decision (revision de la entrada de I/O del 2026-07-14): en cloud se usa `cache_mode: none` y se confia unicamente en copiar el dataset al disco local del runtime (`/content`). Justificacion: el objetivo del arreglo de I/O era evitar la lectura lenta desde Google Drive; copiar el dataset a SSD local ya elimina ese cuello por si solo (en las corridas locales del M4, leyendo de SSD con `cache_mode: none`, `data_wait_seconds` ya era ~0 tras calentar los workers). El cache anadia un ahorro marginal (recomputar la normalizacion, barato frente al forward/backward) a cambio de ~200 GB de disco que Colab no tiene. La copia del dataset ocupa ~30 GB, holgada.
+
+El mecanismo de cache seleccionable (`build_cached_dataset`, `cache_mode` none|memory|persistent) se mantiene en el codigo: es correcto y util cuando el dataset vive en almacenamiento lento y hay disco de sobra, o para un subconjunto (`memory` + `cache_num`). Solo se cambia el valor por defecto de las configs de cloud.
+
+Cambios aplicados:
+
+- `configs/training/colab_l4.yaml` y `configs/training/colab_pro.yaml`: `cache_mode: persistent` -> `cache_mode: none` (se elimina `cache_dir`), con comentario explicando el motivo.
+- `docs/colab-pro-baseline-residual-unet.md` (seccion 7c): la copia del dataset a `/content` pasa a ser el arreglo de I/O; se documenta por que NO se usa cache en cloud (el split completo no cabe en disco).
+- `notebooks/colab_swin_unetr_l4.ipynb`: se actualizan los textos que mencionaban el cache persistente.
+
+Recuperacion inmediata en la sesion afectada: parar el entrenamiento, `rm -rf /content/tfm_cache` para liberar disco, `git pull` y relanzar la celda 8. Se pierden los ~1090 pasos porque la epoca 1 (~1135 pasos) no habia cerrado y no se habia guardado checkpoint.
+
+Impacto en la memoria final: matiza la decision de eficiencia de I/O. La leccion (copiar a disco local vs cachear preprocesado, y el limite de disco del entorno) es material util para la discusion de coste computacional y reproducibilidad en el capitulo de Desarrollo.
+
+Pendientes o riesgos abiertos:
+
+- Relanzar Swin-UNETR en L4 con `cache_mode: none` y confirmar en `train_log.csv` que `data_wait_seconds` se mantiene bajo leyendo desde `/content`.
+- Vigilar el disco tambien en el flujo nnU-Net: su preprocesado genera su propia copia; con symlinks en `imagesTr` el crudo no se duplica, pero `nnUNet_preprocessed` si ocupa. Revisar espacio antes de entrenar.

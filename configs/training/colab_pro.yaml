@@ -15,12 +15,13 @@ training:
   pin_memory: true
   persistent_workers: true
   prefetch_factor: 2
-  # I/O: cache the deterministic prefix (load + normalize + pad) to fast local
-  # disk so that after the first epoch the NIfTI reads bypass Google Drive.
-  # Requires the dataset copied to the runtime and cache_dir on local disk
-  # (/content), NOT on Drive. See docs/colab-pro-baseline-residual-unet.md.
-  cache_mode: persistent
-  cache_dir: /content/tfm_cache/colab_pro
+  # I/O: copy the dataset to the runtime's LOCAL disk (/content) and read from
+  # there. Local SSD reads already drive data_wait ~0, so no cache is used:
+  # caching the full preprocessed split (~150 MB/case x ~1378 cases ~= 200 GB)
+  # overflows Colab's ~235 GB disk. See docs/colab-pro-baseline-residual-unet.md
+  # section 7c. (For a small subset, cache_mode: memory with cache_num is an
+  # option, but it is unnecessary once the data are on local disk.)
+  cache_mode: none
   amp: true
   cudnn_benchmark: true
   max_epochs: 30
