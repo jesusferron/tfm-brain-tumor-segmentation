@@ -1,0 +1,8 @@
+# Dependencies for the external nnU-Net v2 baseline (full BraTS-GLI run).
+# Install on top of the training environment (see requirements/protocol.txt).
+# In Colab:
+#   !pip install -r requirements/nnunet.txt
+# nnU-Net v2 pulls in torch; on Colab the runtime already ships a CUDA torch,
+# so install nnunetv2 without forcing a torch version there.
+
+nnunetv2==2.7.0

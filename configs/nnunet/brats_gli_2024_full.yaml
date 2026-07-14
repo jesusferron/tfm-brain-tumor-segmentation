@@ -1,0 +1,26 @@
+# Full nnU-Net v2 baseline for BraTS-GLI 2024, converted directly from the TFM
+# versioned splits (labels 0-4 preserved). Used by
+# scripts/nnunet/prepare_brats_gli_nnunet_full.py and docs/nnunet-baseline.md.
+#
+# This does NOT stack modalities into a 4D NIfTI (that was only the smoke-test
+# path). It writes nnU-Net's native multi-channel layout, symlinking each
+# modality, so the baseline trains on the exact TFM train split and predicts on
+# the exact TFM val/test split.
+
+dataset_id: 725
+dataset_name: BraTSGLI2024
+# imagesTr/labelsTr come from this split; imagesTs (held out) from test_split.
+split_dir: outputs/splits/brats_gli_2024_seed20260526
+train_split: train.csv
+test_split: val.csv            # switch to test.csv only for the final held-out evaluation
+link_mode: symlink            # 'copy' if the runtime cannot symlink to the dataset
+
+# nnU-Net working directories (set as env vars nnUNet_raw / nnUNet_preprocessed
+# / nnUNet_results). On Colab keep them on local disk (/content), not Drive.
+nnunet_raw: outputs/nnunet_full/nnUNet_raw
+nnunet_preprocessed: outputs/nnunet_full/nnUNet_preprocessed
+nnunet_results: outputs/nnunet_full/nnUNet_results
+
+# Training configuration for the baseline.
+configuration: 3d_fullres
+fold: 0                        # single fold baseline; 5-fold ensemble is out of the compute budget

@@ -1,6 +1,6 @@
 # Bitacora metodologica del TFM
 
-Ultima actualizacion: 2026-07-14 (perfil L4 y config de Swin-UNETR con gradient checkpointing para el entrenamiento del Transformer-UNet en cloud)
+Ultima actualizacion: 2026-07-14 (baseline fuerte nnU-Net: conversor directo del split completo al formato nnU-Net v2 y flujo documentado de entrenamiento/evaluacion en cloud)
 
 Este documento registra, de forma incremental, la metodologia seguida durante el TFM. Su objetivo no es duplicar la memoria final, sino conservar la trazabilidad de lo que se decide, por que se decide, como se ejecuta y que evidencia queda disponible para justificarlo despues en el documento final.
 
@@ -937,3 +937,41 @@ Pendientes o riesgos abiertos:
 - Ejecutar el smoke test de Swin en L4 y, si pasa, la corrida de 5000 pasos; registrar GPU, pico `gpu_memory_gb`, `step_seconds` y si hizo falta bajar el patch.
 - Si L4 no basta ni con checkpointing a patch 96, escalar a A100 con `swin_unetr.yaml` + `colab_pro.yaml`.
 - Tras Swin, continuar con nnU-Net (pilar 1) y luego el presupuesto de 2-3 dias para `adaptive_gating` (pilar 3).
+
+## 2026-07-14 - Baseline fuerte nnU-Net: conversor del split completo y flujo en cloud
+
+Actividad realizada: se prepara el pilar 1 del objetivo defendible (baseline fuerte nnU-Net) mas alla del smoke test del 2026-05-18. Se implementa un conversor que transforma los splits versionados del TFM al formato nativo de nnU-Net v2 y se documenta el flujo completo de entrenamiento y evaluacion en cloud, reutilizando el `evaluate` del TFM para obtener metricas comparables.
+
+Objetivo metodologico: que nnU-Net entrene sobre exactamente el mismo split `train` que el resto de modelos y se evalue sobre el mismo `val`/`test`, con Dice y HD95 por ET/TC/WT calculados por el mismo codigo, de modo que el baseline fuerte sea directamente comparable con los modelos MONAI (residuales, attention, Swin).
+
+Decisiones cerradas (resuelven pendientes abiertos desde 2026-05-18):
+
+- Conversion directa al formato nnU-Net v2, no el apilado 4D via `nnUNetV2Runner` del smoke test. Cada modalidad se enlaza con symlink usando el naming de canal de nnU-Net (`{case_id}_0000..0003.nii.gz`); no se duplican datos (opcion `--link-mode copy` si el runtime no permite symlink). Motivo: el apilado 4D de 1135+243 casos duplicaria cientos de GB y anadiria un paso fragil; la conversion directa es el camino estandar y eficiente en disco.
+- Uso de la CLI nativa `nnUNetv2_*` en lugar del `nnUNetV2Runner` de MONAI. La friccion del runner (apilado 4D) hace preferible la ruta oficial para el run completo; el smoke test ya demostro la viabilidad tecnica.
+- Etiquetas 0-4 preservadas. Inspeccion local de casos reales confirma que BraTS-GLI 2024 usa etiquetas 0,1,2,3,4 consecutivas (0=fondo, 1=NCR, 2=ED, 3=ET, 4=RC; label 1 raro pero presente). nnU-Net las acepta como problema multiclase estandar. Al preservarlas, el mapa predicho usa el mismo esquema entero que el ground truth y el `evaluate` del TFM funciona sin conversor de predicciones.
+- Identificador nnU-Net = `case_id`. El `case_id` no contiene `_`, asi que el parseo `{id}_{canal}` de nnU-Net es inambiguo y la prediccion sale como `{case_id}.nii.gz`, exactamente lo que espera el `evaluate` del TFM. Sin renombrado intermedio.
+- Split `val` a `imagesTs` (imagenes sin etiqueta): queda fuera de los folds internos de nnU-Net, held out del entrenamiento. El split `test` no se toca hasta la evaluacion final.
+- `3d_fullres`, fold 0 (baseline de un solo fold; el ensemble de 5 folds queda fuera del presupuesto). Trainer reducido `nnUNetTrainer_250epochs` (el defecto son 1000 epocas, dias en una GPU); 250 epocas es el compromiso de presupuesto, con el 1000-epocas como opcion canonica documentada.
+
+Verificacion (local, sin ejecutar nnU-Net):
+
+- `compileall` correcto del conversor.
+- Ejecucion del conversor con `--max-cases 2` a un directorio temporal: genera `imagesTr` (2x4 symlinks con naming correcto apuntando a los NIfTI reales), `labelsTr` (`{case_id}.nii.gz`), `imagesTs` con casos de `val` distintos de `train` (sin fuga), y `dataset.json` con `channel_names` {0:t1n,1:t1c,2:t2w,3:t2f} y `labels` {background:0,NCR:1,ED:2,ET:3,RC:4}.
+- Comprobacion de que los symlinks resuelven a NIfTI validos: 4 canales con shape identica y label con la misma shape y valores dentro de 0-4.
+- No se ejecuto `plan_and_preprocess`, entrenamiento ni prediccion en local (requieren GPU y horas; se haran en Colab).
+
+Evidencia generada:
+
+- `scripts/nnunet/prepare_brats_gli_nnunet_full.py`
+- `configs/nnunet/brats_gli_2024_full.yaml`
+- `requirements/nnunet.txt`
+- `docs/nnunet-baseline.md` (flujo completo en cloud: convertir -> plan/preprocess -> train -> predict val -> evaluate)
+
+Impacto en la memoria final: habilita el pilar 1 (baseline fuerte). El detalle de conversion, esquema de etiquetas y protocolo de comparabilidad (mismo split, mismas metricas) alimenta el capitulo de Desarrollo y la discusion de resultados, donde nnU-Net actuara como referencia frente a la que situar Swin-UNETR y las estrategias de fusion.
+
+Pendientes o riesgos abiertos:
+
+- Ejecutar el flujo en Colab (preferible A100) y registrar tiempo, pico de memoria y metricas de `val`; comparar con Swin y los residuales.
+- Confirmar que `nnUNetv2_plan_and_preprocess --verify_dataset_integrity` acepta el dataset generado (esperado, etiquetas declaradas y consecutivas); si detecta algo, ajustar `dataset.json`.
+- Decidir, a la vista del tiempo real, si se sube a 1000 epocas o se mantiene 250 para el baseline reportable.
+- Evaluacion final sobre `test` solo con la configuracion congelada (regenerar `imagesTs` con `--test-split test.csv`).
