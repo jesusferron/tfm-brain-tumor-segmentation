@@ -15,6 +15,12 @@ training:
   pin_memory: true
   persistent_workers: true
   prefetch_factor: 2
+  # I/O: cache the deterministic prefix (load + normalize + pad) to fast local
+  # disk so that after the first epoch the NIfTI reads bypass Google Drive.
+  # Requires the dataset copied to the runtime and cache_dir on local disk
+  # (/content), NOT on Drive. See docs/colab-pro-baseline-residual-unet.md.
+  cache_mode: persistent
+  cache_dir: /content/tfm_cache/colab_pro
   amp: true
   cudnn_benchmark: true
   max_epochs: 30

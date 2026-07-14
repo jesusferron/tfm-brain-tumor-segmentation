@@ -1,6 +1,6 @@
 # Bitacora metodologica del TFM
 
-Ultima actualizacion: 2026-07-13 (reunion con el tutor: decisiones cerradas sobre limites de la fusion adaptativa, secuencia experimental, reparto Metodologia/Desarrollo y estructura de la memoria)
+Ultima actualizacion: 2026-07-14 (arreglo de I/O: cache MONAI seleccionable por config para eliminar el cuello de botella de lectura desde Google Drive)
 
 Este documento registra, de forma incremental, la metodologia seguida durante el TFM. Su objetivo no es duplicar la memoria final, sino conservar la trazabilidad de lo que se decide, por que se decide, como se ejecuta y que evidencia queda disponible para justificarlo despues en el documento final.
 
@@ -850,3 +850,52 @@ Pendientes o riesgos abiertos:
 
 - Track B (sin computo): re-nivelar el capitulo 3 a fases de alto nivel trasladando el detalle al capitulo 4; actualizar el README maestro; completar la tabla comparativa (una tabla, columnas minimas); anadir tabla modalidad->tejido/lesion y seleccionar los cortes axiales ilustrativos/analiticos.
 - Track A (computo): implementar el arreglo de I/O y ejecutar la secuencia Swin-UNETR -> nnU-Net; dedicar el presupuesto de 2-3 dias a estabilizar `adaptive_gating` antes de concluir; corrida final multi-semilla y evaluacion sobre `test.csv`.
+
+## 2026-07-14 - Arreglo de I/O: cache MONAI seleccionable por configuracion
+
+Actividad realizada: se implementa una estrategia de cache seleccionable por configuracion en la pipeline de datos para eliminar el cuello de botella de I/O diagnosticado el 2026-06-25 (A100 infrautilizado leyendo NIfTI desde Google Drive: `compute` ~0.5 s/paso frente a picos de `data_wait` de 3-11 s). Es el primer paso de la ruta critica del Track A (prerrequisito de Swin-UNETR y nnU-Net).
+
+Objetivo metodologico: que el entrenamiento en cloud deje de estar limitado por la lectura desde Drive, de modo que la GPU (L4 para desarrollo, A100 para corridas finales) se aproveche de verdad, sin cambiar el dataset experimental, los splits, la semilla ni la resolucion.
+
+Procedimiento seguido:
+
+- Se anade `build_cached_dataset` en `tfm_brats/monai_pipeline.py`, que construye el dataset MONAI segun `cache_mode`:
+  - `none` (por defecto): `monai.data.Dataset` plano; conserva exactamente el comportamiento anterior. Adecuado cuando los datos residen en SSD local (sin cuello de I/O).
+  - `memory`: `CacheDataset` en RAM, con `cache_rate` o `cache_num` para acotar (el split completo de train no cabe en RAM).
+  - `persistent`: `PersistentDataset` que cachea a disco local (`cache_dir`). Es el arreglo para el cuello de Drive: tras la primera epoca, el prefijo determinista de las transforms (carga NIfTI + normalizacion de intensidad + padding) se sirve desde disco local en lugar de releer y renormalizar desde Drive.
+- `build_dataloader` y `train_one_run` propagan los parametros de cache. En modo `persistent` se usan subdirectorios separados `train/` y `val/` bajo `cache_dir`.
+- El prefijo cacheado es el determinista; MONAI reejecuta las transforms aleatorias (`RandCropByPosNegLabeld`, `RandFlipd`) en cada paso, de modo que la augmentation no se ve afectada.
+- Se registran `cache_mode`, `cache_rate`, `cache_num` y `cache_dir` en `train_summary.json` y en la linea de setup del log, para trazabilidad.
+- `configs/training/colab_pro.yaml` pasa a `cache_mode: persistent` con `cache_dir: /content/tfm_cache/colab_pro` (disco local del runtime). Los perfiles locales (`mac_m4_pro*.yaml`) se mantienen en `none` porque en local no hay cuello de I/O.
+- Se actualiza `docs/colab-pro-baseline-residual-unet.md` (nueva seccion 7c) documentando las dos optimizaciones complementarias: copiar el dataset a `/content` y activar el cache persistente en disco local.
+
+Justificacion de las decisiones:
+
+- El cache persistente en disco local es la opcion recomendada para BraTS-GLI: el split de train (1135 casos) no cabe en RAM como `CacheDataset` completo (cada caso preprocesado ~140 MB), pero si cabe en el disco del runtime.
+- `cache_dir` debe estar en disco local (`/content`), nunca en Drive; en Drive el cache seria tan lento como el problema que resuelve.
+- Mantener `none` como defecto preserva la retrocompatibilidad de todos los YAML y tests existentes.
+
+Verificacion (local, backend CPU, sobre datos reales del split):
+
+- Test unitario nuevo `tests/test_dataloader_cache.py` (5 casos: cada modo + rutas de error). Suite completa: 11 tests OK (antes 6).
+- `compileall` correcto sobre `tfm_brats` y `tests`.
+- Corrida real de 2 pasos con `cache_mode: persistent`:
+  - RUN 1 (construye cache): `data_wait` ~1.0 s/paso, ~0.85 step/s; se generan 2 ficheros `.pt` (uno por caso de train).
+  - RUN 2 (reutiliza cache): `data_wait` cae a ~0.07 s/paso, velocidad ~6.5 step/s (mejora ~7x en I/O); los `.pt` no se reescriben (mtime intacto) y la loss es identica a RUN 1 (misma semilla; el cache preserva la correccion del prefijo determinista).
+  - RUN 3 (`cache_mode: none`, defecto): entrena sin cambios respecto al comportamiento previo.
+- La mejora medida (~7x) es sobre SSD local, donde el I/O ya era pequeno; sobre Google Drive, donde `data_wait` dominaba, el efecto esperado es mayor.
+
+Evidencia generada:
+
+- `tfm_brats/monai_pipeline.py` (`build_cached_dataset`, `build_dataloader` y `train_one_run` extendidos)
+- `tests/test_dataloader_cache.py`
+- `configs/training/colab_pro.yaml` (`cache_mode: persistent`, `cache_dir`)
+- `docs/colab-pro-baseline-residual-unet.md` (seccion 7c)
+
+Impacto en la memoria final: documenta una decision de eficiencia computacional que materializa el diagnostico del 2026-06-25 y da soporte al criterio de "coste computacional asumible" de la pregunta de investigacion. Habilita las corridas de Swin-UNETR y nnU-Net del Track A.
+
+Pendientes o riesgos abiertos:
+
+- Ejecutar en Colab la secuencia recomendada (copia a `/content` + cache persistente) y re-perfilar `data_wait_seconds` y `steps_per_second` tras la primera epoca para cuantificar la mejora real en cloud y decidir si L4 basta o hace falta A100 en la fase final.
+- Vigilar el espacio en disco de `/content` al cachear el split completo; si se agota, reducir el split cacheado o limpiar `cache_dir`.
+- En backends con multiprocessing por `spawn` (macOS), `cache_mode: memory` con `num_workers>0` recachearia por worker; por eso en local se usa `none` (y `persistent` seria la alternativa si se quisiera cache en local).

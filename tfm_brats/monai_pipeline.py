@@ -136,6 +136,55 @@ def build_inference_transforms(config: dict[str, Any]):
     )
 
 
+def build_cached_dataset(
+    items: list[dict[str, Any]],
+    transform: Any,
+    *,
+    cache_mode: str = "none",
+    cache_rate: float = 1.0,
+    cache_num: int | None = None,
+    cache_dir: str | Path | None = None,
+    cache_num_workers: int | None = None,
+):
+    """Build a MONAI dataset with an optional caching strategy.
+
+    The deterministic prefix of ``transform`` (load + channel-first + region
+    mapping + intensity normalization, plus padding for training) is what gets
+    cached; MONAI re-runs the random transforms every epoch, so augmentation is
+    preserved. ``cache_mode`` decides where that prefix lives:
+
+    - ``none`` (default): plain ``Dataset``; reads and re-normalizes every step.
+      Preserves the historical behaviour and is fine when the data sit on a fast
+      local SSD (no I/O bottleneck).
+    - ``memory``: ``CacheDataset`` keeping the prefix in RAM (use ``cache_rate``
+      or ``cache_num`` to cap it; a full BraTS-GLI train split does not fit).
+    - ``persistent``: ``PersistentDataset`` writing the prefix to ``cache_dir``
+      on disk. This is the fix for the Google Drive bottleneck: after the first
+      epoch the NIfTI reads and normalization are served from fast local disk
+      (e.g. ``/content`` on Colab) instead of Drive.
+    """
+    from monai.data import CacheDataset, Dataset, PersistentDataset
+
+    mode = str(cache_mode or "none").lower()
+    if mode == "none":
+        return Dataset(data=items, transform=transform)
+    if mode == "memory":
+        kwargs: dict[str, Any] = {"data": items, "transform": transform}
+        if cache_num is not None:
+            kwargs["cache_num"] = int(cache_num)
+        else:
+            kwargs["cache_rate"] = float(cache_rate)
+        if cache_num_workers is not None:
+            kwargs["num_workers"] = int(cache_num_workers)
+        return CacheDataset(**kwargs)
+    if mode == "persistent":
+        if cache_dir is None:
+            raise ValueError("cache_mode 'persistent' requires 'cache_dir'.")
+        Path(cache_dir).mkdir(parents=True, exist_ok=True)
+        return PersistentDataset(data=items, transform=transform, cache_dir=Path(cache_dir))
+    raise ValueError(f"Unsupported cache_mode: {cache_mode!r} (use none | memory | persistent).")
+
+
 def build_dataloader(
     items: list[dict[str, Any]],
     transform: Any,
@@ -146,10 +195,23 @@ def build_dataloader(
     pin_memory: bool = False,
     persistent_workers: bool = False,
     prefetch_factor: int | None = None,
+    cache_mode: str = "none",
+    cache_rate: float = 1.0,
+    cache_num: int | None = None,
+    cache_dir: str | Path | None = None,
+    cache_num_workers: int | None = None,
 ):
-    from monai.data import DataLoader, Dataset, list_data_collate
+    from monai.data import DataLoader, list_data_collate
 
-    dataset = Dataset(data=items, transform=transform)
+    dataset = build_cached_dataset(
+        items,
+        transform,
+        cache_mode=cache_mode,
+        cache_rate=cache_rate,
+        cache_num=cache_num,
+        cache_dir=cache_dir,
+        cache_num_workers=cache_num_workers,
+    )
     kwargs: dict[str, Any] = {
         "batch_size": batch_size,
         "shuffle": shuffle,
@@ -528,6 +590,19 @@ def train_one_run(
     persistent_workers = bool(training_config.get("persistent_workers", num_workers > 0))
     prefetch_factor_raw = training_config.get("prefetch_factor")
     prefetch_factor = int(prefetch_factor_raw) if prefetch_factor_raw is not None else None
+    cache_mode = str(training_config.get("cache_mode", "none"))
+    cache_rate = float(training_config.get("cache_rate", 1.0))
+    cache_num_raw = training_config.get("cache_num")
+    cache_num = int(cache_num_raw) if cache_num_raw is not None else None
+    cache_num_workers_raw = training_config.get("cache_num_workers")
+    cache_num_workers = int(cache_num_workers_raw) if cache_num_workers_raw is not None else None
+    cache_dir_base = training_config.get("cache_dir")
+
+    def _split_cache_dir(split: str) -> str | None:
+        if cache_mode.lower() != "persistent" or cache_dir_base is None:
+            return None
+        return (Path(cache_dir_base) / split).as_posix()
+
     train_loader = build_dataloader(
         train_items,
         train_transform,
@@ -537,6 +612,11 @@ def train_one_run(
         pin_memory=pin_memory,
         persistent_workers=persistent_workers,
         prefetch_factor=prefetch_factor,
+        cache_mode=cache_mode,
+        cache_rate=cache_rate,
+        cache_num=cache_num,
+        cache_dir=_split_cache_dir("train"),
+        cache_num_workers=cache_num_workers,
     )
     val_loader = build_dataloader(
         val_items,
@@ -547,6 +627,11 @@ def train_one_run(
         pin_memory=pin_memory,
         persistent_workers=persistent_workers,
         prefetch_factor=prefetch_factor,
+        cache_mode=cache_mode,
+        cache_rate=cache_rate,
+        cache_num=cache_num,
+        cache_dir=_split_cache_dir("val"),
+        cache_num_workers=cache_num_workers,
     )
 
     if device.type == "cuda" and bool(training_config.get("cudnn_benchmark", False)):
@@ -596,7 +681,10 @@ def train_one_run(
         f"batch_size={int(training_config.get('batch_size', 1))}, "
         f"samples_per_case={int(training_config.get('samples_per_case', 2))}, "
         f"num_workers={num_workers}, pin_memory={pin_memory}, "
-        f"persistent_workers={persistent_workers}, prefetch_factor={prefetch_factor}",
+        f"persistent_workers={persistent_workers}, prefetch_factor={prefetch_factor}, "
+        f"cache_mode={cache_mode}"
+        + (f", cache_dir={cache_dir_base}" if cache_mode.lower() == "persistent" else "")
+        + (f", cache_rate={cache_rate}" if cache_mode.lower() == "memory" else ""),
         flush=True,
     )
 
@@ -787,6 +875,10 @@ def train_one_run(
         "pin_memory": pin_memory,
         "persistent_workers": persistent_workers,
         "prefetch_factor": prefetch_factor,
+        "cache_mode": cache_mode,
+        "cache_rate": cache_rate if cache_mode.lower() == "memory" else None,
+        "cache_num": cache_num if cache_mode.lower() == "memory" else None,
+        "cache_dir": cache_dir_base if cache_mode.lower() == "persistent" else None,
         "loss_last": losses[-1] if losses else None,
         "loss_mean": float(np.mean(losses)) if losses else None,
         "validation": last_validation,

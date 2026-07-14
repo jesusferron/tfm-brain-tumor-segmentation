@@ -366,9 +366,39 @@ Recomendaciones por arquitectura:
 - `swin_unetr`: 62M parametros. Si la A100 reporta OOM o memoria muy ajustada, activar `use_checkpoint: true` en `configs/model/swin_unetr.yaml`; si sigue sin caber, reducir `batch_size` a 1 o `patch_size` a `[96, 96, 96]` en el training config.
 - Ablaciones de fusion: mismo coste que el baseline, comparables en tiempo por paso.
 
+## 7c. Optimizacion De I/O (recomendado antes del entrenamiento real)
+
+En corridas anteriores el A100 estaba infrautilizado: el `compute` por paso era ~0.5 s pero `data_wait` presentaba picos de 3-11 s cada pocos pasos. El cuello no era la GPU sino la lectura de NIfTI desde Google Drive (ver [vitacora 2026-06-25](vitacora/README.md)). Hay dos optimizaciones complementarias; conviene aplicar las dos.
+
+**1) Copiar el dataset al disco local del runtime.** Drive es lento por acceso aleatorio. Copia los roots supervisados a `/content` (disco local del runtime) una sola vez por sesion:
+
+```bash
+!mkdir -p /content/TFM-datasets
+!rsync -ah --info=progress2 "/content/drive/MyDrive/TFM-datasets/training_data1_v2" /content/TFM-datasets/
+!rsync -ah --info=progress2 "/content/drive/MyDrive/TFM-datasets/training_data_additional" /content/TFM-datasets/
+```
+
+Y apunta `dataset_root` al disco local (misma celda del paso 5):
+
+```python
+dataset_root = "/content/TFM-datasets"
+```
+
+**2) Cachear el preprocesado en disco local (`cache_mode: persistent`).** `configs/training/colab_pro.yaml` ya trae `cache_mode: persistent` y `cache_dir: /content/tfm_cache/colab_pro`. Con esto, MONAI ejecuta el prefijo determinista de las transforms (carga NIfTI + normalizacion de intensidad + padding) **una sola vez por caso** y guarda el resultado en `cache_dir`; a partir de la segunda epoca, cada caso se sirve desde disco local en lugar de releer y renormalizar. Las transforms aleatorias (crop, flips) se siguen aplicando en cada paso, asi que la augmentation no se ve afectada.
+
+Requisitos e implicaciones del cache persistente:
+
+- `cache_dir` debe estar en disco local del runtime (`/content/...`), **nunca** en Drive; si apunta a Drive, el cache seria tan lento como el problema que intenta resolver.
+- El cache se invalida solo si cambian las transforms o las rutas de entrada (por eso conviene fijar `dataset_root` antes de la primera epoca).
+- Ocupa espacio en `/content` (volumenes preprocesados). Si el runtime se queda sin disco, reduce el split o borra `cache_dir`.
+- Alternativa en RAM: `cache_mode: memory` con `cache_rate` (fraccion cacheada) o `cache_num`. No cabe el split completo de train en RAM, asi que solo es util con `cache_rate` bajo; para BraTS-GLI el modo `persistent` es la opcion recomendada.
+- Modo por defecto en los perfiles locales (`mac_m4_pro*.yaml`): `none` (sin cache). En local el dataset ya vive en SSD y no hay cuello de I/O, por lo que el cache no aporta.
+
+Tras la primera epoca, vuelve a mirar `train_log.csv`: `data_wait_seconds` deberia caer a valores cercanos a 0 y `steps_per_second` subir. Ese es el indicador de que el I/O ha dejado de ser el limitante.
+
 ## 8. Entrenamiento Real
 
-Si el smoke test funciona, lanza un primer entrenamiento acotado. Este perfil usa `amp`, mayor batch efectivo y validacion menos frecuente para aprovechar mejor A100.
+Si el smoke test funciona, lanza un primer entrenamiento acotado. Este perfil usa `amp`, mayor batch efectivo y validacion menos frecuente para aprovechar mejor A100. Aplica antes la optimizacion de I/O de la seccion 7c.
 
 ```bash
 !python -m tfm_brats.cli train \
@@ -398,19 +428,7 @@ Puedes monitorizar desde otra celda:
 !tail -n 20 outputs/train/residual_unet_3d/train_log.csv
 ```
 
-Si la velocidad es muy baja, copia primero el dataset al disco local del runtime y cambia `dataset_root` a `/content/TFM-datasets`:
-
-```bash
-!mkdir -p /content/TFM-datasets
-!rsync -ah --info=progress2 "/content/drive/MyDrive/TFM-datasets/training_data1_v2" /content/TFM-datasets/
-!rsync -ah --info=progress2 "/content/drive/MyDrive/TFM-datasets/training_data_additional" /content/TFM-datasets/
-```
-
-Despues actualiza el YAML igual que en el paso 5, usando:
-
-```python
-dataset_root = "/content/TFM-datasets"
-```
+Si `data_wait` sigue dominando a `compute`, es que no se aplico (o no surtio efecto) la optimizacion de I/O de la seccion 7c: confirma que copiaste el dataset a `/content/TFM-datasets`, que `dataset_root` apunta ahi y que `cache_dir` esta en disco local del runtime. Recuerda que la primera epoca todavia paga la lectura inicial (mientras se construye el cache); la mejora se nota a partir de la segunda.
 
 ## 9. Revisar Entrenamiento
 
