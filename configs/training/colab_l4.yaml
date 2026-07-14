@@ -1,0 +1,33 @@
+training:
+  seed: 20260526
+  device: cuda
+  patch_size: [128, 128, 128]
+  divisible_k: 16
+  sliding_window_roi_size: [128, 128, 128]
+  sliding_window_batch_size: 1
+  sliding_window_overlap: 0.5
+  prediction_threshold: 0.5
+  # L4 has 24 GB (vs A100 40 GB). batch_size=1 keeps the heaviest model
+  # (Swin-UNETR, 62M params at patch 128) within memory; samples_per_case=2
+  # still amortizes the per-case I/O. Small models also fit at batch_size>1,
+  # but batch_size=1 is kept for a single consistent L4 development protocol.
+  samples_per_case: 2
+  positive_crop_ratio: 1.0
+  negative_crop_ratio: 1.0
+  batch_size: 1
+  num_workers: 4
+  pin_memory: true
+  persistent_workers: true
+  prefetch_factor: 2
+  # I/O fix: cache the deterministic transform prefix to LOCAL runtime disk
+  # (never Drive). See docs/colab-pro-baseline-residual-unet.md section 7c.
+  cache_mode: persistent
+  cache_dir: /content/tfm_cache/colab_l4
+  amp: true
+  cudnn_benchmark: true
+  max_epochs: 30
+  validation_batches: 8
+  validation_interval: 1
+  log_every_steps: 10
+  learning_rate: 0.0001
+  weight_decay: 0.00001

@@ -1,6 +1,6 @@
 # Bitacora metodologica del TFM
 
-Ultima actualizacion: 2026-07-14 (arreglo de I/O: cache MONAI seleccionable por config para eliminar el cuello de botella de lectura desde Google Drive)
+Ultima actualizacion: 2026-07-14 (perfil L4 y config de Swin-UNETR con gradient checkpointing para el entrenamiento del Transformer-UNet en cloud)
 
 Este documento registra, de forma incremental, la metodologia seguida durante el TFM. Su objetivo no es duplicar la memoria final, sino conservar la trazabilidad de lo que se decide, por que se decide, como se ejecuta y que evidencia queda disponible para justificarlo despues en el documento final.
 
@@ -899,3 +899,41 @@ Pendientes o riesgos abiertos:
 - Ejecutar en Colab la secuencia recomendada (copia a `/content` + cache persistente) y re-perfilar `data_wait_seconds` y `steps_per_second` tras la primera epoca para cuantificar la mejora real en cloud y decidir si L4 basta o hace falta A100 en la fase final.
 - Vigilar el espacio en disco de `/content` al cachear el split completo; si se agota, reducir el split cacheado o limpiar `cache_dir`.
 - En backends con multiprocessing por `spawn` (macOS), `cache_mode: memory` con `num_workers>0` recachearia por worker; por eso en local se usa `none` (y `persistent` seria la alternativa si se quisiera cache en local).
+
+## 2026-07-14 - Perfil L4 y config de Swin-UNETR con gradient checkpointing
+
+Actividad realizada: se prepara el segundo paso de la ruta critica del Track A (entrenar el Transformer-UNet que da nombre al TFM) creando un perfil de entrenamiento para GPU L4 y una variante del modelo Swin-UNETR con gradient checkpointing, para que quepa en 24 GB.
+
+Objetivo metodologico: dejar listo, verificado y documentado el camino para lanzar Swin-UNETR en cloud sin ensayo-error de memoria, respetando la decision de hardware del 2026-06-25 (L4 para desarrollo, A100 para corridas finales).
+
+Procedimiento y decisiones:
+
+- `configs/training/colab_l4.yaml`: perfil para L4 (24 GB). Difiere de `colab_pro.yaml` en `batch_size: 1` (frente a 2) para que el modelo mas pesado quepa en 24 GB, y en `cache_dir: /content/tfm_cache/colab_l4`. Mantiene patch 128, `samples_per_case: 2`, AMP, validacion cada epoca con 8 batches y `cache_mode: persistent`. La resolucion 128 se conserva para comparabilidad con el resto de corridas.
+- `configs/model/swin_unetr_l4.yaml`: identico a `swin_unetr.yaml` salvo `use_checkpoint: true`. El gradient checkpointing de MONAI intercambia computo por memoria; es la primera mitigacion documentada para el coste de memoria de los 62M parametros de Swin en L4. En A100 (40 GB) puede usarse `swin_unetr.yaml` sin checkpointing (mas rapido).
+- `docs/colab-pro-baseline-residual-unet.md`: nueva seccion 8b con smoke test y corrida de Swin en L4, y el escalado si hay OOM (bajar patch a 96, o pasar a A100 sin checkpointing).
+
+Justificacion:
+
+- Se mantiene una sola resolucion (128) entre modelos para no introducir la resolucion como variable de confusion en la comparacion de estrategias de fusion y arquitecturas.
+- `batch_size: 1` en L4 es el valor seguro para el peor caso (Swin); los modelos pequenos tambien caben con holgura. La corrida final unificada y multi-semilla (pendiente) fijara el protocolo definitivo.
+- No se cambian lr, weight_decay ni el resto de hiperparametros respecto a los perfiles previos; cualquier ajuste futuro se registrara aqui.
+
+Verificacion (local, CPU):
+
+- `configs/training/colab_l4.yaml` y `configs/model/swin_unetr_l4.yaml` cargan y parsean correctamente via `tfm_brats.config.load_config`.
+- `build_model` construye Swin-UNETR con `use_checkpoint: true` (62.19M parametros) y ejecuta forward + backward correctos a patch 64 en CPU, con salida `(1, 3, 64, 64, 64)`.
+- No se ha ejecutado en GPU todavia: el pico real de memoria y `step_seconds` en L4 se mediran en la primera corrida en Colab.
+
+Evidencia generada:
+
+- `configs/training/colab_l4.yaml`
+- `configs/model/swin_unetr_l4.yaml`
+- `docs/colab-pro-baseline-residual-unet.md` (seccion 8b)
+
+Impacto en la memoria final: habilita el pilar 2 del objetivo defendible (Transformer-UNet). El detalle de gradient checkpointing y el perfil por hardware alimentan el capitulo de Desarrollo y la discusion de coste computacional.
+
+Pendientes o riesgos abiertos:
+
+- Ejecutar el smoke test de Swin en L4 y, si pasa, la corrida de 5000 pasos; registrar GPU, pico `gpu_memory_gb`, `step_seconds` y si hizo falta bajar el patch.
+- Si L4 no basta ni con checkpointing a patch 96, escalar a A100 con `swin_unetr.yaml` + `colab_pro.yaml`.
+- Tras Swin, continuar con nnU-Net (pilar 1) y luego el presupuesto de 2-3 dias para `adaptive_gating` (pilar 3).

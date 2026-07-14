@@ -430,6 +430,42 @@ Puedes monitorizar desde otra celda:
 
 Si `data_wait` sigue dominando a `compute`, es que no se aplico (o no surtio efecto) la optimizacion de I/O de la seccion 7c: confirma que copiaste el dataset a `/content/TFM-datasets`, que `dataset_root` apunta ahi y que `cache_dir` esta en disco local del runtime. Recuerda que la primera epoca todavia paga la lectura inicial (mientras se construye el cache); la mejora se nota a partir de la segunda.
 
+## 8b. Perfil L4 Y Swin-UNETR (Transformer-UNet)
+
+Segun la decision de hardware de la vitacora (2026-06-25), **L4 (24 GB) es la GPU de desarrollo/optimizacion** y A100 se reserva para las corridas finales largas. Para trabajar en L4 se usa el perfil `configs/training/colab_l4.yaml`, que ya trae `cache_mode: persistent` (con `cache_dir: /content/tfm_cache/colab_l4`) y `batch_size: 1` para que quepa el modelo mas pesado.
+
+En Runtime > Change runtime type, elige `L4` si esta disponible. Aplica antes la optimizacion de I/O de la seccion 7c (copia a `/content` + cache persistente).
+
+Swin-UNETR es el Transformer-UNet que da nombre al TFM (62M parametros). En L4 (24 GB) hay que activar gradient checkpointing, ya incluido en `configs/model/swin_unetr_l4.yaml` (`use_checkpoint: true`), que intercambia computo por memoria para que quepa a patch 128.
+
+Smoke test de Swin en L4 (2 pasos) antes de la corrida larga:
+
+```bash
+!python -m tfm_brats.cli train \
+  --dataset-config configs/dataset/brats_gli_2024.yaml \
+  --model-config configs/model/swin_unetr_l4.yaml \
+  --training-config configs/training/colab_l4.yaml \
+  --split-dir outputs/splits/brats_gli_2024_seed20260526 \
+  --output-dir outputs/train/swin_unetr_l4_smoke \
+  --max-steps 2 --max-train-cases 2 --max-val-cases 1 \
+  --device cuda
+```
+
+Corrida de Swin-UNETR en L4:
+
+```bash
+!python -m tfm_brats.cli train \
+  --dataset-config configs/dataset/brats_gli_2024.yaml \
+  --model-config configs/model/swin_unetr_l4.yaml \
+  --training-config configs/training/colab_l4.yaml \
+  --split-dir outputs/splits/brats_gli_2024_seed20260526 \
+  --output-dir outputs/train/swin_unetr_l4 \
+  --max-steps 5000 \
+  --device cuda
+```
+
+Vigila en `train_log.csv` la columna `gpu_memory_gb` (pico) y `step_seconds`. Escalado si aparece OOM aun con checkpointing: reducir `patch_size` a `[96, 96, 96]` en `colab_l4.yaml`, o pasar a A100 con `configs/model/swin_unetr.yaml` (sin checkpointing, mas rapido) y `configs/training/colab_pro.yaml`. Al terminar, ejecuta `predict` + `evaluate` sobre `val` como en las secciones 10 y 11, con `--model-config configs/model/swin_unetr_l4.yaml` y `--output-dir outputs/train/swin_unetr_l4`.
+
 ## 9. Revisar Entrenamiento
 
 Cuando termine, muestra el resumen:

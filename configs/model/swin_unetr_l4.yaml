@@ -1,0 +1,17 @@
+model:
+  name: swin_unetr
+  architecture: swin_unetr
+  implementation: monai.networks.nets.SwinUNETR
+  in_channels: 4
+  out_channels: 3
+  feature_size: 48
+  depths: [2, 2, 2, 2]
+  num_heads: [3, 6, 12, 24]
+  drop_rate: 0.0
+  attn_drop_rate: 0.0
+  dropout_path_rate: 0.0
+  # Gradient checkpointing ON: trades compute for memory so the 62M-parameter
+  # Swin-UNETR fits on an L4 (24 GB) at patch 128. On an A100 (40 GB) it may fit
+  # without checkpointing (faster) via configs/model/swin_unetr.yaml.
+  use_checkpoint: true
+  use_v2: false
