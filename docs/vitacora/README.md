@@ -1050,3 +1050,21 @@ Pendientes o riesgos abiertos:
 - Entrenar el baseline fuerte nnU-Net (pilar 1), ya preparado, preferiblemente en A100.
 - Dedicar el presupuesto de 2-3 dias a `adaptive_gating` (pilar 3) antes de concluir.
 - Corrida final unificada (mas pasos + multi-semilla) y evaluacion sobre `test` con la configuracion congelada; solo entonces las cifras son finales.
+
+## 2026-07-15 - nnU-Net 3d_fullres en curso: tiempos y observacion de hardware
+
+Actividad realizada: se lanza el entrenamiento del baseline nnU-Net (`3d_fullres`, fold 0, `nnUNetTrainer_250epochs`) en Colab con A100, tras convertir el split completo (paso 6) y preprocesar (paso 8). Se anotan tiempos y utilizacion de GPU para la decision de hardware.
+
+Datos observados:
+
+- `plan_and_preprocess` completado sin error de integridad. Disco tras preprocesar: 120 GB usados de 236 (117 GB libres); margen suficiente para el entrenamiento (solo escribe checkpoints).
+- Memoria GPU en entrenamiento: ~8.6 GB de 40. Es el presupuesto de VRAM que nnU-Net planifica por defecto para `3d_fullres` (~8 GB); no usa mas aunque la GPU tenga 40. Confirma que la memoria no es criterio para elegir GPU con nnU-Net.
+- Utilizacion de GPU oscilante: muestras de 19% (183 W) y 83% (330 W). El pipeline es mayormente GPU-bound con stalls periodicos de carga de datos (augmentation de nnU-Net, CPU). No es GPU ociosa.
+- Tiempo por epoca: 66.4 s (una "epoca" de nnU-Net = 250 iteraciones fijas). Total estimado 250 x 66.4 s ~= 4.6 h + validacion interna final ~= 5 h.
+
+Observacion de hardware (matiz sobre la decision del 2026-06-25):
+
+- A diferencia de nuestra pipeline MONAI (limitada por I/O de Drive), nnU-Net lee el preprocesado desde disco local y su cuello alterna entre GPU y CPU. Con ~66 s/epoca y util oscilante, la A100 aporta: una L4 (menos computo) se estima en ~100-130 s/epoca (~7-9 h), aproximadamente el doble. Para el baseline de una sola vez la A100 es defendible; para repeticiones, L4 cambia coste por ~2x de tiempo. No es un veredicto tajante (la util oscila); la referencia real es el tiempo/epoca.
+- El presupuesto fijo de ~8 GB de VRAM de nnU-Net hace el baseline reproducible en hardware modesto (T4/L4 caben de sobra en memoria); util material para la discusion de coste computacional de la memoria.
+
+Pendiente: al terminar (~5 h), ejecutar predict sobre `val` + evaluate con el CLI del TFM y anadir nnU-Net a la comparativa junto a Swin-UNETR; registrar las metricas reportables.
