@@ -13,7 +13,7 @@
 | Nivel | Definición | Estado |
 | :-- | :-- | :-- |
 | **Mínimo** | Pipeline reproducible + baseline 3D + evaluación interna BraTS-GLI | ✅ Alcanzado |
-| **Objetivo (defendible)** | Baseline fuerte (nnU-Net) + Transformer-UNet (Swin) + ablación de fusión | 🟡 2 de 3 pilares en marcha |
+| **Objetivo (defendible)** | Baseline fuerte (nnU-Net) + Transformer-UNet (Swin) + ablación de fusión | 🟡 2 de 3 pilares cerrados; falta consolidar la ablación |
 | **Ambicioso** | Robustez ante modalidades faltantes / fusión neuronal | ⬜ No iniciado |
 
 Estado por pilar del objetivo defendible:
@@ -21,13 +21,15 @@ Estado por pilar del objetivo defendible:
 | Pilar | Estado |
 | :-- | :-- |
 | Ablación de fusión | 🟡 Resultados preliminares (val, 5000 pasos, 1 semilla). `adaptive_gating` no sostiene aún la hipótesis |
-| Transformer-UNet (Swin-UNETR) | ✅ Entrenado en L4 (5000 pasos, 1 semilla). **Mejor modelo**: mean Dice val 0.715 (ET 0.567 / TC 0.745 / WT 0.834) |
-| Baseline fuerte (nnU-Net) | ⬜ Preparado (conversor + flujo cloud); sin entrenar |
+| Transformer-UNet (Swin-UNETR) | ✅ Entrenado en L4 (5000 pasos, 1 semilla): mean Dice val 0.715 (ET 0.567 / TC 0.745 / WT 0.834) |
+| Baseline fuerte (nnU-Net) | ✅ Entrenado en A100 (3d_fullres, fold 0, 250 épocas). **Referencia/techo**: mean Dice val 0.835 (ET 0.719 / TC 0.874 / WT 0.913) |
 
-**Mensaje clave:** el TFM ya supera el mínimo; Swin-UNETR (el que da nombre al TFM) ya está
-entrenado y es el mejor modelo, lo que resuelve el mayor riesgo (título vs. evidencia). Falta el
-baseline fuerte (nnU-Net, preparado y listo para lanzar) y consolidar el tercer pilar (ablación),
-en duda por el bajo rendimiento de la fusión adaptativa.
+**Mensaje clave:** el TFM ya supera el mínimo y tiene cerrados los pilares 1 y 2. nnU-Net marca el
+techo de referencia (mean Dice 0.835) y Swin-UNETR es el mejor de los modelos propios (0.715),
+resolviendo el riesgo título vs. evidencia. Falta consolidar el pilar 3 (ablación de fusión), en
+duda por el bajo rendimiento de la fusión adaptativa. **Aviso:** la comparativa actual mezcla
+presupuestos (nnU-Net a convergencia vs. modelos propios a 5000 pasos); la comparación
+arquitectónica justa requiere la corrida final a convergencia para todos.
 
 **Restricciones confirmadas por el alumno (2026-06-26):**
 
@@ -42,11 +44,10 @@ en duda por el bajo rendimiento de la fusión adaptativa.
 
 Ruta crítica; cada paso habilita el siguiente:
 
-1. **Optimizar el I/O en cloud** — cache MONAI (`CacheDataset`/`PersistentDataset`) + copia del
-   dataset al disco local del runtime de Colab. Prerrequisito de cualquier entrenamiento serio en
-   GPU (hoy el A100 está infrautilizado por lectura desde Drive; ver [vitácora 2026-06-25](../vitacora/README.md)).
-2. **Swin-UNETR en L4/A100** — entrena el Transformer que da nombre al TFM. *(Pilar 2)*
-3. **nnU-Net entrenado y evaluado** como baseline fuerte externo. *(Pilar 1)*
+1. ✅ **I/O en cloud resuelto** — copia del dataset al disco local del runtime (el cache de
+   preprocesado desbordaba el disco; ver [vitácora 2026-07-14](../vitacora/README.md)).
+2. ✅ **Swin-UNETR entrenado** en L4 (Transformer que da nombre al TFM). *(Pilar 2)*
+3. ✅ **nnU-Net entrenado y evaluado** como baseline fuerte externo (mean Dice val 0.835). *(Pilar 1)*
 4. **Resolver `adaptive_gating`** — corrida larga + warmup / lr específico de la compuerta /
    regularización; decide si la hipótesis es positiva o vira a resultado negativo defendible.
    Independiente; abordable en local. *(Pilar 3)*

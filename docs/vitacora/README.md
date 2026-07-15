@@ -1068,3 +1068,36 @@ Observacion de hardware (matiz sobre la decision del 2026-06-25):
 - El presupuesto fijo de ~8 GB de VRAM de nnU-Net hace el baseline reproducible en hardware modesto (T4/L4 caben de sobra en memoria); util material para la discusion de coste computacional de la memoria.
 
 Pendiente: al terminar (~5 h), ejecutar predict sobre `val` + evaluate con el CLI del TFM y anadir nnU-Net a la comparativa junto a Swin-UNETR; registrar las metricas reportables.
+
+### Resultados reportables de nnU-Net sobre val (243 casos)
+
+Fuente: `outputs/evaluation/nnunet_3dfullres_val_metrics_summary.json`. Cierra el pilar 1.
+
+| Region | Dice media | Dice mediana | HD95 media (finitos) | HD95 mediana |
+|---|---|---|---|---|
+| ET | 0.719 | 0.891 | 3.08 (207/243) | 1.00 |
+| TC | 0.874 | 0.930 | 3.47 (238/243) | 1.41 |
+| WT | 0.913 | 0.947 | 2.97 (242/243) | 1.41 |
+
+mean Dice: 0.835.
+
+Comparativa completa (val, 243 casos):
+
+| Modelo | mean Dice | ET | TC | WT | HD95 ET | HD95 TC | HD95 WT |
+|---|---|---|---|---|---|---|---|
+| **nnU-Net 3d_fullres** (250 ep) | **0.835** | 0.719 | 0.874 | 0.913 | 3.08 | 3.47 | 2.97 |
+| swin_unetr_l4 (5000 pasos) | 0.715 | 0.567 | 0.745 | 0.834 | 6.39 | 11.00 | 10.55 |
+| attention_unet_3d (5000) | 0.655 | 0.452 | 0.698 | 0.814 | 22.24 | 19.69 | 18.74 |
+| residual_unet_3d concat (5000) | 0.607 | 0.361 | 0.668 | 0.792 | 23.05 | 20.82 | 20.46 |
+| residual + global_weighted (5000) | 0.606 | 0.371 | 0.657 | 0.790 | 20.46 | 18.21 | 18.01 |
+| residual + adaptive_gating (5000) | 0.588 | 0.360 | 0.631 | 0.774 | 28.43 | 26.41 | 25.15 |
+
+Interpretacion:
+
+- nnU-Net es el mejor con margen y actua como techo de referencia (baseline fuerte), sobre todo en HD95 (medianas ~1-1.4 mm; fronteras mucho mas limpias) y en ET (0.719).
+- Matiz metodologico critico: la comparacion NO es justa por presupuesto. nnU-Net entreno a convergencia (250 epocas x 250 iteraciones) frente a los 5000 pasos (~4.4 epocas) de los modelos MONAI, infraentrenados. Parte de la ventaja de nnU-Net es mayor entrenamiento, no solo arquitectura. La comparacion arquitectonica justa exige la corrida final a convergencia para todos los modelos; hasta entonces, nnU-Net se reporta como referencia/techo, no como competidor en igualdad de condiciones.
+- Se mantiene el matiz media/mediana (los casos sin ET hunden la media) y el HD95 sobre finitos (ET 207/243) que ya se anoto para Swin.
+
+Artefactos: `outputs/evaluation/nnunet_3dfullres_val_metrics{.csv,_summary.json}` y el modelo en `nnUNet_results/Dataset725_BraTSGLI2024`, copiados a Google Drive (`TFM-resultados/nnunet_3dfullres/`).
+
+Estado de pilares tras esta entrada: pilar 1 (baseline fuerte) y pilar 2 (Transformer-UNet) cerrados; queda el pilar 3 (ablacion de fusion), pendiente del presupuesto de 2-3 dias para `adaptive_gating`.
