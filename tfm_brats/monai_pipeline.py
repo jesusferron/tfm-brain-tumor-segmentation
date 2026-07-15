@@ -308,18 +308,51 @@ def build_model(model_config: dict[str, Any]):
                 return x * weights * x.shape[1]
 
         class AdaptiveGatingFusion(nn.Module):
-            def __init__(self, channels: int, hidden: int = 8) -> None:
+            def __init__(
+                self,
+                channels: int,
+                hidden: int = 8,
+                temperature: float = 1.0,
+                stats: tuple[str, ...] = ("mean",),
+            ) -> None:
                 super().__init__()
+                # Per-channel global descriptors fed to the gate. With only "mean" the
+                # signal is nearly constant across cases (z-score-normalized inputs have
+                # ~zero global mean), so the gate degenerates to a static weighting. Adding
+                # "std" gives a genuine per-case signal (dispersion varies with tumor/brain
+                # extent), which is what makes the gating actually adaptive.
+                self.stats = tuple(stats)
                 self.gate = nn.Sequential(
-                    nn.Linear(channels, hidden),
+                    nn.Linear(channels * len(self.stats), hidden),
                     nn.ReLU(inplace=True),
                     nn.Linear(hidden, channels),
                 )
+                # Softmax temperature > 1 softens the gate so it cannot aggressively
+                # zero out modalities.
+                self.temperature = float(temperature)
+                # Warmup blend: 0 = pure identity (gate off), 1 = fully gated. The
+                # training loop ramps it up. Non-persistent: it is a runtime schedule,
+                # not a learned parameter, so it stays out of the checkpoint.
+                self.register_buffer("warmup_alpha", torch.ones(()), persistent=False)
+                # Mean softmax entropy of the last forward, for optional regularization
+                # (discourage collapse) and diagnostics.
+                self.last_entropy = None
+
+            def _descriptors(self, x):
+                feats = []
+                if "mean" in self.stats:
+                    feats.append(x.mean(dim=(2, 3, 4)))
+                if "std" in self.stats:
+                    feats.append(x.std(dim=(2, 3, 4)))
+                return torch.cat(feats, dim=1)
 
             def forward(self, x):
-                pooled = x.mean(dim=(2, 3, 4))
-                weights = torch.softmax(self.gate(pooled), dim=1).view(x.shape[0], -1, 1, 1, 1)
-                return x * weights * x.shape[1]
+                logits = self.gate(self._descriptors(x)) / self.temperature
+                weights = torch.softmax(logits, dim=1)
+                self.last_entropy = -(weights * weights.clamp_min(1e-8).log()).sum(dim=1).mean()
+                gated = x * weights.view(x.shape[0], -1, 1, 1, 1) * x.shape[1]
+                alpha = self.warmup_alpha
+                return (1.0 - alpha) * x + alpha * gated
 
         class FusionUNet(nn.Module):
             def __init__(self, fusion: nn.Module, unet: nn.Module) -> None:
@@ -340,7 +373,13 @@ def build_model(model_config: dict[str, Any]):
         elif fusion_name == "global_weighted":
             fusion = GlobalWeightedFusion(in_channels)
         elif fusion_name == "adaptive_gating":
-            fusion = AdaptiveGatingFusion(in_channels, hidden=int(model_config.get("fusion_hidden", 8)))
+            stats = tuple(str(s) for s in model_config.get("fusion_stats", ["mean"]))
+            fusion = AdaptiveGatingFusion(
+                in_channels,
+                hidden=int(model_config.get("fusion_hidden", 8)),
+                temperature=float(model_config.get("fusion_temperature", 1.0)),
+                stats=stats,
+            )
         else:
             raise ValueError(f"Unsupported fusion mode: {fusion_name}")
 
@@ -504,6 +543,7 @@ def _append_log_row(log_path: Path, row: dict[str, Any], *, write_header: bool =
         "steps_per_second",
         "patches_per_second",
         "gpu_memory_gb",
+        "fusion_entropy",
     ]
     with log_path.open("a", newline="", encoding="utf-8") as handle:
         writer = csv.DictWriter(handle, fieldnames=fieldnames, extrasaction="ignore")
@@ -639,11 +679,29 @@ def train_one_run(
     amp = bool(training_config.get("amp", device.type == "cuda")) and device.type == "cuda"
     model = build_model(model_config).to(device)
     loss_fn = DiceCELoss(sigmoid=True, squared_pred=True)
-    optimizer = torch.optim.AdamW(
-        model.parameters(),
-        lr=float(training_config.get("learning_rate", 1e-4)),
-        weight_decay=float(training_config.get("weight_decay", 1e-5)),
-    )
+    base_lr = float(training_config.get("learning_rate", 1e-4))
+    base_wd = float(training_config.get("weight_decay", 1e-5))
+    fusion_lr = training_config.get("fusion_lr")
+    fusion_weight_decay = training_config.get("fusion_weight_decay")
+    fusion_params = [param for name, param in model.named_parameters() if name.startswith("fusion.")]
+    if (fusion_lr is not None or fusion_weight_decay is not None) and fusion_params:
+        # Give the fusion (gate) parameters their own lr / weight_decay group. A lower
+        # gate lr is one of the mitigations for the adaptive-gating instability.
+        other_params = [param for name, param in model.named_parameters() if not name.startswith("fusion.")]
+        optimizer = torch.optim.AdamW(
+            [
+                {"params": other_params},
+                {
+                    "params": fusion_params,
+                    "lr": float(fusion_lr) if fusion_lr is not None else base_lr,
+                    "weight_decay": float(fusion_weight_decay) if fusion_weight_decay is not None else base_wd,
+                },
+            ],
+            lr=base_lr,
+            weight_decay=base_wd,
+        )
+    else:
+        optimizer = torch.optim.AdamW(model.parameters(), lr=base_lr, weight_decay=base_wd)
     scaler = _make_grad_scaler(device, amp)
 
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -667,6 +725,11 @@ def train_one_run(
     sw_batch_size = int(training_config.get("sliding_window_batch_size", 1))
     overlap = float(training_config.get("sliding_window_overlap", 0.5))
 
+    fusion_module = getattr(model, "fusion", None)
+    is_adaptive_gating = fusion_module is not None and hasattr(fusion_module, "warmup_alpha")
+    fusion_warmup_steps = int(training_config.get("fusion_warmup_steps", 0))
+    fusion_entropy_weight = float(training_config.get("fusion_entropy_weight", 0.0))
+
     global_step = 0
     total_patches = 0
     losses: list[float] = []
@@ -687,6 +750,14 @@ def train_one_run(
         + (f", cache_rate={cache_rate}" if cache_mode.lower() == "memory" else ""),
         flush=True,
     )
+    if is_adaptive_gating:
+        print(
+            "Adaptive gating knobs: "
+            f"temperature={float(model_config.get('fusion_temperature', 1.0))}, "
+            f"warmup_steps={fusion_warmup_steps}, entropy_weight={fusion_entropy_weight}, "
+            f"fusion_lr={fusion_lr}, fusion_weight_decay={fusion_weight_decay}",
+            flush=True,
+        )
 
     model.train()
     for epoch in range(max_epochs):
@@ -699,10 +770,20 @@ def train_one_run(
             images = batch["image"].to(device, non_blocking=True)
             labels = batch["label"].to(device, non_blocking=True).float()
             patches = int(images.shape[0])
+            if is_adaptive_gating and fusion_warmup_steps > 0:
+                # Ramp the gate in from identity over the warmup window.
+                fusion_module.warmup_alpha.fill_(min(1.0, global_step / fusion_warmup_steps))
             optimizer.zero_grad(set_to_none=True)
+            step_entropy = ""
             with _autocast_context(device, amp):
                 logits = model(images)
                 loss = loss_fn(logits, labels)
+                if is_adaptive_gating and fusion_module.last_entropy is not None:
+                    step_entropy = float(fusion_module.last_entropy.detach().cpu())
+                    if fusion_entropy_weight > 0.0:
+                        # Maximize gate entropy (subtract from the loss) to discourage
+                        # collapse onto a single modality.
+                        loss = loss - fusion_entropy_weight * fusion_module.last_entropy
             if scaler.is_enabled():
                 scaler.scale(loss).backward()
                 scaler.step(optimizer)
@@ -748,6 +829,7 @@ def train_one_run(
                         "steps_per_second": steps_per_second,
                         "patches_per_second": patches_per_second,
                         "gpu_memory_gb": gpu_memory_gb if gpu_memory_gb is not None else "",
+                        "fusion_entropy": step_entropy,
                     },
                 )
                 gpu_text = f", gpu_mem={gpu_memory_gb:.2f}GB" if gpu_memory_gb is not None else ""
@@ -879,6 +961,11 @@ def train_one_run(
         "cache_rate": cache_rate if cache_mode.lower() == "memory" else None,
         "cache_num": cache_num if cache_mode.lower() == "memory" else None,
         "cache_dir": cache_dir_base if cache_mode.lower() == "persistent" else None,
+        "fusion_lr": float(fusion_lr) if fusion_lr is not None else None,
+        "fusion_weight_decay": float(fusion_weight_decay) if fusion_weight_decay is not None else None,
+        "fusion_warmup_steps": fusion_warmup_steps if is_adaptive_gating else None,
+        "fusion_entropy_weight": fusion_entropy_weight if is_adaptive_gating else None,
+        "fusion_temperature": float(model_config.get("fusion_temperature", 1.0)) if is_adaptive_gating else None,
         "loss_last": losses[-1] if losses else None,
         "loss_mean": float(np.mean(losses)) if losses else None,
         "validation": last_validation,

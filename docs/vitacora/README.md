@@ -1,6 +1,6 @@
 # Bitacora metodologica del TFM
 
-Ultima actualizacion: 2026-07-14 (Swin-UNETR entrenado en L4 y evaluado sobre val completo: mejor modelo, cierra el pilar 2 del objetivo defendible)
+Ultima actualizacion: 2026-07-16 (pilar 3: diagnostico de `adaptive_gating` -la compuerta no es adaptativa- y variantes preparadas para la exploracion dentro del presupuesto de 2-3 dias)
 
 Este documento registra, de forma incremental, la metodologia seguida durante el TFM. Su objetivo no es duplicar la memoria final, sino conservar la trazabilidad de lo que se decide, por que se decide, como se ejecuta y que evidencia queda disponible para justificarlo despues en el documento final.
 
@@ -1101,3 +1101,42 @@ Interpretacion:
 Artefactos: `outputs/evaluation/nnunet_3dfullres_val_metrics{.csv,_summary.json}` y el modelo en `nnUNet_results/Dataset725_BraTSGLI2024`, copiados a Google Drive (`TFM-resultados/nnunet_3dfullres/`).
 
 Estado de pilares tras esta entrada: pilar 1 (baseline fuerte) y pilar 2 (Transformer-UNet) cerrados; queda el pilar 3 (ablacion de fusion), pendiente del presupuesto de 2-3 dias para `adaptive_gating`.
+
+## 2026-07-16 - Pilar 3: diagnostico de `adaptive_gating` y variantes para la exploracion
+
+Actividad realizada: se prepara la exploracion de la fusion adaptativa (contribucion principal, pilar 3) dentro del presupuesto de 2-3 dias acordado con el tutor. Se diagnostica por que la corrida preliminar quedo por debajo del baseline, se anaden palancas de ajuste por configuracion y se define un plan de corridas con criterio de decision.
+
+Objetivo metodologico: antes de gastar el presupuesto, entender la causa del bajo rendimiento y preparar variantes que ataquen la causa real, para poder concluir con fundamento si la hipotesis se sostiene o vira a resultado negativo defendible.
+
+Diagnostico (script nuevo `scripts/diagnose_adaptive_gating.py`, sobre el checkpoint de la corrida de 5000 pasos y 30 casos reales de val):
+
+- Curva de validacion: mean Dice sube monotono hasta epoca 4 (0.586) y **regresa en epoca 5 (0.521)** en las tres regiones. Inestabilidad tardia confirmada (el baseline concat seguia subiendo).
+- Comportamiento de la compuerta: produce **pesos identicos en los 30 casos** (t1c=0.332, t2f=0.291, t1n=0.205, t2w=0.172; desviacion entre casos = 0.000). Entropia ~1.353 (max uniforme 1.386): no hay colapso hacia una modalidad.
+- Hallazgo clave: **la compuerta "adaptativa" no es adaptativa.** Ha aprendido un peso estatico por modalidad, equivalente a `global_weighted` con un MLP no lineal encima. Causa: su senal de condicionamiento (media espacial global de las modalidades ya z-score-normalizadas) es casi constante entre casos, asi que no tiene informacion por-caso a la que adaptarse; el MLP extra solo aporta no convexidad e inestabilidad. Esto explica por que en los preliminares adaptive_gating (0.588) ~= global_weighted (0.606) ~= concat (0.607).
+
+Implicacion estrategica: estabilizar la optimizacion solo igualaria adaptive_gating a global_weighted. Para que la hipotesis tenga opcion real hay que dar a la compuerta una senal por-caso informativa. Por eso las variantes cubren dos frentes: (a) senal mas rica y (b) estabilizacion.
+
+Palancas anadidas (todas por config, desactivadas por defecto, retrocompatibles):
+
+- Modelo: `fusion_stats` (por defecto `[mean]`; opcion `[mean, std]` anade desviacion tipica por canal, que si varia entre casos = senal por-caso real, atacando la causa raiz) y `fusion_temperature` (softmax mas suave).
+- Entrenamiento: `fusion_lr` y `fusion_weight_decay` (grupo de optimizador propio para los parametros de fusion), `fusion_warmup_steps` (la compuerta entra desde identidad) y `fusion_entropy_weight` (regulariza la entropia de la softmax). El log gana la columna `fusion_entropy` para vigilar en vivo; el summary registra todos los knobs.
+
+Cambios de codigo: `AdaptiveGatingFusion` (descriptores mean/std, temperatura, buffer no persistente `warmup_alpha`, `last_entropy`); `build_model` (lee los knobs de modelo); `train_one_run` (grupos de optimizador para fusion, warmup por paso, termino de entropia en la loss, logging y summary). `warmup_alpha` es buffer no persistente, asi que los checkpoints antiguos siguen cargando con strict=True.
+
+Configs preparadas: `configs/model/residual_unet_3d_adaptive_gating_meanstd.yaml`, `..._temp.yaml`, `..._meanstd_temp.yaml`; `configs/training/mac_m4_pro_128_5k_gate_stab.yaml` (fusion_lr 2e-5 + warmup 500 + entropia 0.01). Plan de 4 corridas y criterio de decision en `docs/adaptive-gating-exploration.md`.
+
+Verificacion local:
+
+- 17 tests OK (6 previos + 5 de cache + 6 nuevos de la compuerta en `tests/test_adaptive_gating.py`: dimension de entrada mean vs mean+std, forma de salida, entropia, warmup_alpha=0 = identidad, temperatura, ausencia de warmup_alpha en el state_dict).
+- `compileall` correcto.
+- El checkpoint antiguo de adaptive_gating carga con el codigo nuevo (buffer no persistente).
+- Smoke real (CPU, variante meanstd + config estabilizada): imprime los knobs, entrena, valida, guarda checkpoint; la columna `fusion_entropy` se loguea por paso (~1.36) y el summary registra fusion_lr/warmup/entropy/temperature.
+- No se han ejecutado todavia las corridas de 5000 pasos de las variantes: es lo que consume el presupuesto y se lanzara a continuacion.
+
+Impacto en la memoria final: el diagnostico (la compuerta condicionada por descriptores globales no puede ser adaptativa porque su senal es casi constante) es un resultado en si mismo, util tanto si la exploracion vira a positivo (con mean+std) como si se cierra en negativo defendible. Alimenta la discusion de la contribucion en el capitulo de Resultados/Conclusiones.
+
+Pendientes o riesgos abiertos:
+
+- Ejecutar las 4 corridas del plan (R1-R4, ~2 h cada una en M4/L4), evaluar en val y re-diagnosticar (¿la compuerta ya varia entre casos con mean+std? ¿desaparece la regresion?).
+- Si alguna supera concat (0.607) con margen, confirmar con multi-semilla e incluir en la corrida final.
+- Si ninguna supera concat, cerrar como resultado negativo defendible con la evidencia del diagnostico.

@@ -1,0 +1,17 @@
+model:
+  name: residual_unet_3d_adaptive_gating_meanstd
+  architecture: residual_unet_3d
+  implementation: tfm_brats.monai_pipeline.FusionUNet
+  in_channels: 4
+  out_channels: 3
+  channels: [16, 32, 64, 128]
+  strides: [2, 2, 2]
+  num_res_units: 2
+  fusion: adaptive_gating
+  fusion_hidden: 8
+  # Root-cause variant: condition the gate on per-channel mean AND std. The
+  # diagnostic (scripts/diagnose_adaptive_gating.py) showed the mean-only gate
+  # produces identical weights across cases (no per-case signal), degenerating
+  # to a static weighting. std varies with tumor/brain extent, giving the gate
+  # something real to adapt to.
+  fusion_stats: [mean, std]

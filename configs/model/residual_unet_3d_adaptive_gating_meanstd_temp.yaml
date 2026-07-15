@@ -1,0 +1,14 @@
+model:
+  name: residual_unet_3d_adaptive_gating_meanstd_temp
+  architecture: residual_unet_3d
+  implementation: tfm_brats.monai_pipeline.FusionUNet
+  in_channels: 4
+  out_channels: 3
+  channels: [16, 32, 64, 128]
+  strides: [2, 2, 2]
+  num_res_units: 2
+  fusion: adaptive_gating
+  fusion_hidden: 8
+  # Combined: richer per-case signal (mean+std) plus a softer gate (temperature).
+  fusion_stats: [mean, std]
+  fusion_temperature: 2.0
