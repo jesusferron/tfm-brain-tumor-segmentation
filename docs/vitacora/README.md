@@ -1,6 +1,6 @@
 # Bitacora metodologica del TFM
 
-Ultima actualizacion: 2026-07-14 (correccion del arreglo de I/O: el cache persistente del split completo agota el disco de Colab; se pasa a copia del dataset a disco local sin cache)
+Ultima actualizacion: 2026-07-14 (Swin-UNETR entrenado en L4 y evaluado sobre val completo: mejor modelo, cierra el pilar 2 del objetivo defendible)
 
 Este documento registra, de forma incremental, la metodologia seguida durante el TFM. Su objetivo no es duplicar la memoria final, sino conservar la trazabilidad de lo que se decide, por que se decide, como se ejecuta y que evidencia queda disponible para justificarlo despues en el documento final.
 
@@ -1000,3 +1000,53 @@ Pendientes o riesgos abiertos:
 
 - Relanzar Swin-UNETR en L4 con `cache_mode: none` y confirmar en `train_log.csv` que `data_wait_seconds` se mantiene bajo leyendo desde `/content`.
 - Vigilar el disco tambien en el flujo nnU-Net: su preprocesado genera su propia copia; con symlinks en `imagesTr` el crudo no se duplica, pero `nnUNet_preprocessed` si ocupa. Revisar espacio antes de entrenar.
+
+## 2026-07-14 - Swin-UNETR entrenado en L4: mejor modelo, cierra el pilar 2
+
+Actividad realizada: primera corrida completa de Swin-UNETR en cloud (GPU L4) con el perfil `colab_l4.yaml` (`cache_mode: none`, dataset copiado a `/content`, gradient checkpointing) y evaluacion reportable sobre el split `val` completo (243 casos) con el `evaluate` del TFM. Es el pilar 2 del objetivo defendible: el Transformer-UNet que da nombre al TFM.
+
+Objetivo metodologico: entrenar y situar Swin-UNETR frente a los modelos convolucionales bajo el mismo protocolo (mismo split, misma resolucion 128, mismas metricas Dice/HD95 por ET/TC/WT), y confirmar que el arreglo de I/O permite entrenar en cloud sin cuello de lectura.
+
+Configuracion de la corrida:
+
+- Modelo: `configs/model/swin_unetr_l4.yaml` (SwinUNETR 62.19M, `feature_size=48`, `use_checkpoint: true`).
+- Entrenamiento: `configs/training/colab_l4.yaml`, 5000 pasos, `batch_size=1`, `samples_per_case=2`, patch 128, AMP, lr `1e-4`, 1 semilla (`20260526`).
+- Duracion ~2.75 h (9889 s). Pico de memoria GPU ~12.85 GB de 24 (holgura amplia).
+- I/O: `data_wait_seconds` ~0.0004 s por paso (frente a picos de 3-11 s leyendo de Drive). El cuello pasa a ser el computo (~1.92 s/paso). El arreglo de I/O (copia a disco local, sin cache) queda validado en cloud.
+
+Resultados reportables (val, 243 casos). Fuente: `outputs/evaluation/swin_unetr_l4_val_metrics_summary.json`.
+
+| Region | Dice media | Dice mediana | HD95 media (casos finitos) | HD95 mediana |
+|---|---|---|---|---|
+| ET | 0.567 | 0.750 | 6.39 (190/243) | 2.45 |
+| TC | 0.745 | 0.833 | 11.00 (233/243) | 4.00 |
+| WT | 0.834 | 0.887 | 10.55 (242/243) | 3.61 |
+
+mean Dice (media de las tres regiones): 0.715.
+
+Comparativa con los modelos previos (val, 5000 pasos, 1 semilla):
+
+| Modelo | mean Dice | ET | TC | WT |
+|---|---|---|---|---|
+| **swin_unetr_l4** | **0.715** | **0.567** | **0.745** | **0.834** |
+| attention_unet_3d | 0.655 | 0.452 | 0.698 | 0.814 |
+| residual_unet_3d (concat) | 0.607 | 0.361 | 0.668 | 0.792 |
+| residual + global_weighted | 0.606 | 0.371 | 0.657 | 0.790 |
+| residual + adaptive_gating | 0.588 | 0.360 | 0.631 | 0.774 |
+
+Interpretacion:
+
+- Swin-UNETR es el mejor modelo con margen claro, especialmente en ET (0.567 vs 0.452 del siguiente), la region mas dificil. Cierra el pilar 2 y resuelve el mayor riesgo del TFM (titulo vs. evidencia).
+- Matiz media/mediana en ET: media 0.567 pero mediana 0.750. La media la arrastran casos con poco o ningun tumor realzante, donde un falso positivo hunde el Dice; la mediana refleja el comportamiento tipico. En la memoria se reportaran ambas.
+- HD95 sobre casos finitos: ET 190/243, TC 233/243, WT 242/243. Los casos infinitos corresponden a ausencia de la region en prediccion o en ground truth. Las medias de HD95 se calculan solo sobre finitos; hay que declararlo explicitamente.
+- No es un resultado final: 5000 pasos, 1 semilla, sobre val (no test). Swin (62M) esta probablemente infraentrenado a 5000 pasos; su margen podria crecer en la corrida final mas larga.
+
+Artefactos: `outputs/train/swin_unetr_l4/` (train_summary.json, train_log.csv, checkpoints/best.pt), `outputs/evaluation/swin_unetr_l4_val_metrics{.csv,_summary.json}`. Copiados a Google Drive (`TFM-resultados/swin_unetr_l4/`) para persistencia.
+
+Impacto en la memoria final: aporta el resultado central del capitulo de Resultados (Swin-UNETR como mejor arquitectura) y da soporte al titulo. La comparativa alimenta la tabla principal del capitulo 5.
+
+Pendientes o riesgos abiertos:
+
+- Entrenar el baseline fuerte nnU-Net (pilar 1), ya preparado, preferiblemente en A100.
+- Dedicar el presupuesto de 2-3 dias a `adaptive_gating` (pilar 3) antes de concluir.
+- Corrida final unificada (mas pasos + multi-semilla) y evaluacion sobre `test` con la configuracion congelada; solo entonces las cifras son finales.

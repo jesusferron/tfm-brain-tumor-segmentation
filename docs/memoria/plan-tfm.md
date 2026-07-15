@@ -13,7 +13,7 @@
 | Nivel | Definición | Estado |
 | :-- | :-- | :-- |
 | **Mínimo** | Pipeline reproducible + baseline 3D + evaluación interna BraTS-GLI | ✅ Alcanzado |
-| **Objetivo (defendible)** | Baseline fuerte (nnU-Net) + Transformer-UNet (Swin) + ablación de fusión | 🟡 1 de 3 pilares en marcha |
+| **Objetivo (defendible)** | Baseline fuerte (nnU-Net) + Transformer-UNet (Swin) + ablación de fusión | 🟡 2 de 3 pilares en marcha |
 | **Ambicioso** | Robustez ante modalidades faltantes / fusión neuronal | ⬜ No iniciado |
 
 Estado por pilar del objetivo defendible:
@@ -21,12 +21,13 @@ Estado por pilar del objetivo defendible:
 | Pilar | Estado |
 | :-- | :-- |
 | Ablación de fusión | 🟡 Resultados preliminares (val, 5000 pasos, 1 semilla). `adaptive_gating` no sostiene aún la hipótesis |
-| Transformer-UNet (Swin-UNETR) | ⬜ Sin entrenar (da nombre al TFM; ~124 s/paso en MPS → requiere cloud) |
-| Baseline fuerte (nnU-Net) | ⬜ Solo smoke test de conversión |
+| Transformer-UNet (Swin-UNETR) | ✅ Entrenado en L4 (5000 pasos, 1 semilla). **Mejor modelo**: mean Dice val 0.715 (ET 0.567 / TC 0.745 / WT 0.834) |
+| Baseline fuerte (nnU-Net) | ⬜ Preparado (conversor + flujo cloud); sin entrenar |
 
-**Mensaje clave:** el TFM ya supera el mínimo; faltan 2 de los 3 pilares del objetivo defendible
-(Transformer y baseline fuerte), y el tercero (ablación) está en duda por el bajo rendimiento
-actual de la fusión adaptativa.
+**Mensaje clave:** el TFM ya supera el mínimo; Swin-UNETR (el que da nombre al TFM) ya está
+entrenado y es el mejor modelo, lo que resuelve el mayor riesgo (título vs. evidencia). Falta el
+baseline fuerte (nnU-Net, preparado y listo para lanzar) y consolidar el tercer pilar (ablación),
+en duda por el bajo rendimiento de la fusión adaptativa.
 
 **Restricciones confirmadas por el alumno (2026-06-26):**
 
@@ -107,9 +108,10 @@ Tareas transversales:
 
 ## 5. Riesgos abiertos
 
-- **Título vs. evidencia:** el título promete arquitecturas Transformer-UNet y Swin-UNETR aún no
-  está entrenado. Riesgo alto hasta cerrar el pilar 2.
+- ~~**Título vs. evidencia:**~~ **RESUELTO (2026-07-14):** Swin-UNETR entrenado en L4 y es el mejor
+  modelo (mean Dice val 0.715). El pilar 2 queda cubierto.
 - **Contribución en duda:** `adaptive_gating` rinde por debajo del baseline en la corrida
   preliminar. Si se confirma, el TFM debe reescribirse como resultado negativo defendible.
 - **Resultados aún preliminares:** 5000 pasos, una semilla, sin converger, evaluados en val (no
-  test). No reportables como finales.
+  test). No reportables como finales. Aplica también a Swin: buen resultado pero probablemente
+  infraentrenado a 5000 pasos (62M parámetros).
