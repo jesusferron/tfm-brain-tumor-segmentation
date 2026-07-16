@@ -84,6 +84,8 @@ def cmd_train(args: argparse.Namespace) -> int:
     training_config = training_config_raw.get("training", training_config_raw)
     if args.device:
         training_config["device"] = args.device
+    if args.seed is not None:
+        training_config["seed"] = args.seed
     summary = train_one_run(
         spec=spec,
         model_config=model_config,
@@ -174,6 +176,7 @@ def build_parser() -> argparse.ArgumentParser:
     train.add_argument("--max-train-cases", type=int)
     train.add_argument("--max-val-cases", type=int)
     train.add_argument("--device")
+    train.add_argument("--seed", type=int, help="Override the training-config seed (for multi-seed runs).")
     train.set_defaults(func=cmd_train)
 
     predict = subparsers.add_parser("predict", help="export NIfTI predictions for a split")
