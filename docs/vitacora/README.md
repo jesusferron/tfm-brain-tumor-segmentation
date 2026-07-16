@@ -1,6 +1,6 @@
 # Bitacora metodologica del TFM
 
-Ultima actualizacion: 2026-07-16 (pilar 3: diagnostico de `adaptive_gating` -la compuerta no es adaptativa- y variantes preparadas para la exploracion dentro del presupuesto de 2-3 dias)
+Ultima actualizacion: 2026-07-16 (pilar 3, multi-semilla: la fusion mean+std NO mejora de forma robusta a concat; margen de 1 semilla era ruido, con alta varianza y colapso dependiente de semilla)
 
 Este documento registra, de forma incremental, la metodologia seguida durante el TFM. Su objetivo no es duplicar la memoria final, sino conservar la trazabilidad de lo que se decide, por que se decide, como se ejecuta y que evidencia queda disponible para justificarlo despues en el documento final.
 
@@ -1166,3 +1166,33 @@ Interpretacion para la memoria: respuesta matizada a la pregunta de investigacio
 Decision: la senal positiva (superar concat con margen, consistente en 3 configs) cumple el primer criterio del plan, pero falta el segundo (multi-semilla). Antes de darlo por bueno en la corrida final hay que confirmar con varias semillas la mejor variante (R2 por Dice y curva estable, o R3 por HD95) frente a concat/global_weighted, para descartar que el margen sea especifico de la semilla 20260526.
 
 Pendiente inmediato: multi-semilla (p. ej. 3 semillas) de la mejor variante mean+std y de concat como control; si el margen se sostiene, la fusion mean+std entra en la corrida final unificada.
+
+## 2026-07-16 - Pilar 3, multi-semilla: el margen de mean+std no es robusto
+
+Actividad realizada: se confirma con multi-semilla el segundo criterio del plan. Se entrenan concat (`residual_unet_3d`) y la mejor variante `mean+std` (`residual_unet_3d_adaptive_gating_meanstd`, config base) con 2 semillas nuevas (20260527, 20260528), reutilizando la semilla A (20260526), para 3 semillas por modelo. Flujo train(`--seed`) + predict + evaluate sobre val, via `scratchpad/run_multiseed_meanstd_vs_concat.sh`; agregacion con `scripts/aggregate_multiseed.py`.
+
+Objetivo metodologico: descartar que el margen de +0.05 de mean+std sobre concat (observado con una sola semilla) fuera especifico de la semilla. Es el criterio que faltaba antes de dar la contribucion por buena.
+
+Resultados (val, mean Dice por semilla y agregado). Fuente: `outputs/evaluation/multiseed_meanstd_vs_concat.csv` y summaries por semilla.
+
+| Modelo | semilla A (20260526) | 20260527 | 20260528 | Agregado (3 semillas) |
+|---|---|---|---|---|
+| concat | 0.607 | 0.629 | 0.629 | **0.621 +/- 0.025** |
+| mean+std | 0.661 | **0.246** | 0.673 | **0.527 +/- 0.198** |
+
+Detalle del colapso (mean+std, semilla 20260527): ET 0.079, TC 0.189, WT 0.471; HD95 ~68/71/50 mm. Entrenamiento efectivamente roto. Las otras dos semillas de mean+std (0.661, 0.673) si superan a concat.
+
+Interpretacion (revierte la lectura preliminar de una sola semilla):
+
+- La fusion adaptativa mean+std NO mejora de forma robusta a la concatenacion. Su media a 3 semillas (0.527) queda por debajo de concat (0.621) y su varianza es ~8x mayor (0.198 vs 0.025).
+- El patron es inestabilidad dependiente de semilla: mean+std a veces iguala/supera a concat (2 de 3 semillas ~0.66-0.67) pero colapsa en ~1 de cada 3. Es la manifestacion, a nivel de semilla, de la misma inestabilidad de la compuerta ya vista (regresion de la epoca 5, diagnostico del gate estatico).
+- concat es estable y reproducible; la compuerta adaptativa introduce un riesgo de colapso que un metodo defendible no deberia tener.
+- El "margen positivo" de la semilla A era ruido de semilla. Esto valida por que el tutor exigio multi-semilla y por que no se acepta un resultado de una sola semilla.
+
+Conclusion metodologica: con la evidencia acumulada (compuerta estatica en el diagnostico + inestabilidad dependiente de semilla en multi-semilla + estabilizacion que no rescata a la variante original), la hipotesis de que la fusion adaptativa mejora la concatenacion NO se sostiene de forma robusta en este montaje. Es la base de un **resultado negativo defendible**, dentro del criterio acordado con el tutor de agotar vias (se probaron: estabilizacion via warmup/lr/entropia, condicionamiento mas rico mean+std, temperatura, y multi-semilla).
+
+Estado del presupuesto (2-3 dias): consumido ~1 dia (exploracion de 4 variantes + multi-semilla). Queda margen para UNA ultima via si se quiere ser exhaustivo antes de cerrar en negativo: multi-semilla de la variante estabilizada (mean+std + `gate_stab`), por si la estabilizacion reduce la varianza entre semillas. Valor esperado bajo (la compuerta sigue siendo estatica), pero es la unica via no agotada.
+
+Artefactos: `outputs/evaluation/multiseed_*_val_metrics_summary.json`, `outputs/evaluation/multiseed_meanstd_vs_concat.csv`, `scratchpad/run_multiseed_meanstd_vs_concat.sh`, `scripts/aggregate_multiseed.py`.
+
+Pendiente / decision abierta: cerrar el pilar 3 como resultado negativo defendible, o gastar la ultima via (multi-semilla de la variante estabilizada) antes de cerrar. Decision del alumno.

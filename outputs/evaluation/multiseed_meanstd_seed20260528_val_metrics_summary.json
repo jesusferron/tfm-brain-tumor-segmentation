@@ -1,0 +1,43 @@
+{
+  "aggregates": {
+    "ET_dice": {
+      "count": 243,
+      "finite_count": 243,
+      "mean": 0.5057931082723935,
+      "median": 0.6138917603121145
+    },
+    "ET_hd95": {
+      "count": 243,
+      "finite_count": 197,
+      "mean": 9.772806331554161,
+      "median": 3.7416573867739413
+    },
+    "TC_dice": {
+      "count": 243,
+      "finite_count": 243,
+      "mean": 0.707432217392006,
+      "median": 0.7870381888294564
+    },
+    "TC_hd95": {
+      "count": 243,
+      "finite_count": 235,
+      "mean": 12.145949103334482,
+      "median": 4.898979485566356
+    },
+    "WT_dice": {
+      "count": 243,
+      "finite_count": 243,
+      "mean": 0.8055712440688503,
+      "median": 0.8488752071986739
+    },
+    "WT_hd95": {
+      "count": 243,
+      "finite_count": 243,
+      "mean": 16.711731320924102,
+      "median": 4.898979485566356
+    }
+  },
+  "cases": 243,
+  "output_csv": "outputs/evaluation/multiseed_meanstd_seed20260528_val_metrics.csv",
+  "predictions_dir": "outputs/predictions/multiseed_meanstd_seed20260528_val"
+}

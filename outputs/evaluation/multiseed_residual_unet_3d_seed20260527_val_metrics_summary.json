@@ -1,0 +1,43 @@
+{
+  "aggregates": {
+    "ET_dice": {
+      "count": 243,
+      "finite_count": 243,
+      "mean": 0.491654890430176,
+      "median": 0.5968092312723365
+    },
+    "ET_hd95": {
+      "count": 243,
+      "finite_count": 192,
+      "mean": 14.129979032154395,
+      "median": 4.182873156368473
+    },
+    "TC_dice": {
+      "count": 243,
+      "finite_count": 243,
+      "mean": 0.675651491220656,
+      "median": 0.7464305862951872
+    },
+    "TC_hd95": {
+      "count": 243,
+      "finite_count": 234,
+      "mean": 14.95984730021069,
+      "median": 6.041381265149109
+    },
+    "WT_dice": {
+      "count": 243,
+      "finite_count": 243,
+      "mean": 0.8020942245381859,
+      "median": 0.8539138933075492
+    },
+    "WT_hd95": {
+      "count": 243,
+      "finite_count": 243,
+      "mean": 14.316388807607458,
+      "median": 4.898979485566356
+    }
+  },
+  "cases": 243,
+  "output_csv": "outputs/evaluation/multiseed_residual_unet_3d_seed20260527_val_metrics.csv",
+  "predictions_dir": "outputs/predictions/multiseed_residual_unet_3d_seed20260527_val"
+}

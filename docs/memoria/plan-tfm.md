@@ -20,7 +20,7 @@ Estado por pilar del objetivo defendible:
 
 | Pilar | Estado |
 | :-- | :-- |
-| Ablación de fusión | 🟡 Señal positiva: `adaptive_gating` con condicionamiento **mean+std** supera concat (0.66 vs 0.607, val, 1 semilla, consistente en 3 configs). Pendiente multi-semilla. Matiz: la compuerta sigue siendo estática (mejora vía mejor pesado estático, no adaptatividad por-caso) |
+| Ablación de fusión | 🔴 Multi-semilla (3 semillas): `adaptive_gating` mean+std **no supera** a concat de forma robusta (0.527 ± 0.198 vs concat 0.621 ± 0.025; colapsa en 1 de 3 semillas). El margen de 1 semilla era ruido. Encamina a **resultado negativo defendible** (queda opcional: multi-semilla de la variante estabilizada) |
 | Transformer-UNet (Swin-UNETR) | ✅ Entrenado en L4 (5000 pasos, 1 semilla): mean Dice val 0.715 (ET 0.567 / TC 0.745 / WT 0.834) |
 | Baseline fuerte (nnU-Net) | ✅ Entrenado en A100 (3d_fullres, fold 0, 250 épocas). **Referencia/techo**: mean Dice val 0.835 (ET 0.719 / TC 0.874 / WT 0.913) |
 
@@ -111,11 +111,12 @@ Tareas transversales:
 
 - ~~**Título vs. evidencia:**~~ **RESUELTO (2026-07-14):** Swin-UNETR entrenado en L4 y es el mejor
   modelo (mean Dice val 0.715). El pilar 2 queda cubierto.
-- **Contribución (actualizado 2026-07-16):** con condicionamiento **mean+std**, `adaptive_gating`
-  ya supera concat (~0.66 vs 0.607) de forma consistente en 3 configs. Riesgo rebajado, pero
-  pendiente de **multi-semilla** para confirmar que el margen no es de la semilla, y con el matiz de
-  que la mejora viene de un mejor pesado estático, no de adaptatividad por-caso (redactar con
-  precisión). Ver [`../vitacora/README.md`](../vitacora/README.md) (2026-07-16) y
+- **Contribución (actualizado 2026-07-16, multi-semilla):** el margen de `adaptive_gating` mean+std
+  sobre concat **no es robusto**. Con 3 semillas: mean+std 0.527 ± 0.198 (colapsa en 1 de 3) vs
+  concat 0.621 ± 0.025. El "positivo" de una semilla era ruido. La hipótesis (fusión adaptativa >
+  concatenación) **no se sostiene** en este montaje → base para un **resultado negativo defendible**
+  (vías agotadas: estabilización, mean+std, temperatura, multi-semilla; queda opcional multi-semilla
+  de la variante estabilizada). Ver [`../vitacora/README.md`](../vitacora/README.md) (2026-07-16) y
   [`../adaptive-gating-exploration.md`](../adaptive-gating-exploration.md).
 - **Resultados aún preliminares:** 5000 pasos, una semilla, sin converger, evaluados en val (no
   test). No reportables como finales. Aplica también a Swin: buen resultado pero probablemente
