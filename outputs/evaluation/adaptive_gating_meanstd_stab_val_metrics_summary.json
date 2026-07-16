@@ -1,0 +1,43 @@
+{
+  "aggregates": {
+    "ET_dice": {
+      "count": 243,
+      "finite_count": 243,
+      "mean": 0.5188231082749981,
+      "median": 0.6126338718460701
+    },
+    "ET_hd95": {
+      "count": 243,
+      "finite_count": 197,
+      "mean": 11.592943614088254,
+      "median": 4.0
+    },
+    "TC_dice": {
+      "count": 243,
+      "finite_count": 243,
+      "mean": 0.6770430257340159,
+      "median": 0.7597277836634285
+    },
+    "TC_hd95": {
+      "count": 243,
+      "finite_count": 234,
+      "mean": 11.690864454032805,
+      "median": 5.0990195135927845
+    },
+    "WT_dice": {
+      "count": 243,
+      "finite_count": 243,
+      "mean": 0.762878776486964,
+      "median": 0.8218848386079743
+    },
+    "WT_hd95": {
+      "count": 243,
+      "finite_count": 242,
+      "mean": 12.583093630789252,
+      "median": 6.082762530298219
+    }
+  },
+  "cases": 243,
+  "output_csv": "outputs/evaluation/adaptive_gating_meanstd_stab_val_metrics.csv",
+  "predictions_dir": "outputs/predictions/adaptive_gating_meanstd_stab_val"
+}

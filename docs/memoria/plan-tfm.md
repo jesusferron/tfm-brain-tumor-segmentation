@@ -20,7 +20,7 @@ Estado por pilar del objetivo defendible:
 
 | Pilar | Estado |
 | :-- | :-- |
-| Ablación de fusión | 🟡 Resultados preliminares (val, 5000 pasos, 1 semilla). `adaptive_gating` no sostiene aún la hipótesis |
+| Ablación de fusión | 🟡 Señal positiva: `adaptive_gating` con condicionamiento **mean+std** supera concat (0.66 vs 0.607, val, 1 semilla, consistente en 3 configs). Pendiente multi-semilla. Matiz: la compuerta sigue siendo estática (mejora vía mejor pesado estático, no adaptatividad por-caso) |
 | Transformer-UNet (Swin-UNETR) | ✅ Entrenado en L4 (5000 pasos, 1 semilla): mean Dice val 0.715 (ET 0.567 / TC 0.745 / WT 0.834) |
 | Baseline fuerte (nnU-Net) | ✅ Entrenado en A100 (3d_fullres, fold 0, 250 épocas). **Referencia/techo**: mean Dice val 0.835 (ET 0.719 / TC 0.874 / WT 0.913) |
 
@@ -111,8 +111,12 @@ Tareas transversales:
 
 - ~~**Título vs. evidencia:**~~ **RESUELTO (2026-07-14):** Swin-UNETR entrenado en L4 y es el mejor
   modelo (mean Dice val 0.715). El pilar 2 queda cubierto.
-- **Contribución en duda:** `adaptive_gating` rinde por debajo del baseline en la corrida
-  preliminar. Si se confirma, el TFM debe reescribirse como resultado negativo defendible.
+- **Contribución (actualizado 2026-07-16):** con condicionamiento **mean+std**, `adaptive_gating`
+  ya supera concat (~0.66 vs 0.607) de forma consistente en 3 configs. Riesgo rebajado, pero
+  pendiente de **multi-semilla** para confirmar que el margen no es de la semilla, y con el matiz de
+  que la mejora viene de un mejor pesado estático, no de adaptatividad por-caso (redactar con
+  precisión). Ver [`../vitacora/README.md`](../vitacora/README.md) (2026-07-16) y
+  [`../adaptive-gating-exploration.md`](../adaptive-gating-exploration.md).
 - **Resultados aún preliminares:** 5000 pasos, una semilla, sin converger, evaluados en val (no
   test). No reportables como finales. Aplica también a Swin: buen resultado pero probablemente
   infraentrenado a 5000 pasos (62M parámetros).

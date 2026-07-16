@@ -1140,3 +1140,29 @@ Pendientes o riesgos abiertos:
 - Ejecutar las 4 corridas del plan (R1-R4, ~2 h cada una en M4/L4), evaluar en val y re-diagnosticar (¿la compuerta ya varia entre casos con mean+std? ¿desaparece la regresion?).
 - Si alguna supera concat (0.607) con margen, confirmar con multi-semilla e incluir en la corrida final.
 - Si ninguna supera concat, cerrar como resultado negativo defendible con la evidencia del diagnostico.
+
+### Resultados de la exploracion (4 variantes, val, 5000 pasos, 1 semilla)
+
+Ejecutadas en local (M4 Pro, MPS) via `scratchpad/run_adaptive_gating_explore.sh` (train + predict + evaluate + re-diagnostico por variante). Fuente: `outputs/evaluation/adaptive_gating_*_val_metrics_summary.json` y `outputs/evaluation/adaptive_gating_explore_diagnosis.txt`.
+
+| Variante | mean Dice | ET | TC | WT | HD95 ET/TC/WT | Curva val | Compuerta |
+|---|---|---|---|---|---|---|---|
+| R2 mean+std (base) | 0.661 | 0.512 | 0.685 | 0.785 | 13.7/14.5/22.6 | monotona (sin regresion) | estatica |
+| R3 mean+std + estab. | 0.653 | 0.519 | 0.677 | 0.763 | 11.6/11.7/12.6 | leve caida ep.5 (-0.019) | estatica |
+| R4 mean+std + temp + estab. | 0.650 | 0.511 | 0.673 | 0.765 | 11.6/11.5/11.6 | leve caida ep.5 (-0.031) | estatica |
+| R1 orig + estab. | 0.594 | 0.343 | 0.662 | 0.777 | 21.6/21.2/26.8 | cae fuerte ep.5 (-0.125) | estatica |
+
+Referencias previas (val, 5000 pasos): concat 0.607, global_weighted 0.606, adaptive_gating original 0.588, attention_unet 0.655.
+
+Hallazgos:
+
+- Las tres variantes mean+std superan a concat (0.607) y a global_weighted (0.606) con margen (~+0.045 a +0.054), de forma consistente en tres configuraciones de entrenamiento distintas: la mejora la aporta la senal de condicionamiento mean+std, no los knobs de optimizacion. R2 (0.661) iguala/supera al attention_unet (0.655) con 1.2M params (vs 5.9M).
+- Estabilizar la compuerta original mean-only (R1) NO la rescata: 0.594, por debajo de concat y con la regresion tardia intacta (de hecho peor, -0.125). Confirma que el problema no era solo de optimizacion.
+- La estabilizacion sobre mean+std (R3/R4) no sube el Dice respecto a la base (R2) pero mejora mucho el HD95 (fronteras limpias: ~11.6 mm vs 22.6 mm en WT); R4 (temperatura 2.0) da el HD95 mas equilibrado y la entropia mas alta (1.381).
+- MATIZ CRITICO: en las 4 variantes la compuerta sigue siendo casi estatica entre casos (std de pesos ~0.001; domina t2w en los 40 casos). mean+std lleva a un mejor pesado estatico por modalidad, NO a adaptatividad por-caso. La mejora es de rendimiento, no evidencia de que el modelo explote variacion por-caso.
+
+Interpretacion para la memoria: respuesta matizada a la pregunta de investigacion. Una compuerta parametrizada y condicionada por descriptores globales (mean+std) mejora la concatenacion y el pesado estatico simple (~+0.05 mean Dice), pero lo hace via un mejor pesado estatico aprendido (enfasis en t2w), no mediante adaptatividad por-caso. El resultado es positivo en rendimiento pero no valida la "fusion adaptativa" en sentido literal; debe redactarse con esa precision.
+
+Decision: la senal positiva (superar concat con margen, consistente en 3 configs) cumple el primer criterio del plan, pero falta el segundo (multi-semilla). Antes de darlo por bueno en la corrida final hay que confirmar con varias semillas la mejor variante (R2 por Dice y curva estable, o R3 por HD95) frente a concat/global_weighted, para descartar que el margen sea especifico de la semilla 20260526.
+
+Pendiente inmediato: multi-semilla (p. ej. 3 semillas) de la mejor variante mean+std y de concat como control; si el margen se sostiene, la fusion mean+std entra en la corrida final unificada.
