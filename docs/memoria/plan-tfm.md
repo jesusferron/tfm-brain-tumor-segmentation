@@ -13,23 +13,25 @@
 | Nivel | Definición | Estado |
 | :-- | :-- | :-- |
 | **Mínimo** | Pipeline reproducible + baseline 3D + evaluación interna BraTS-GLI | ✅ Alcanzado |
-| **Objetivo (defendible)** | Baseline fuerte (nnU-Net) + Transformer-UNet (Swin) + ablación de fusión | 🟡 2 de 3 pilares cerrados; falta consolidar la ablación |
+| **Objetivo (defendible)** | Baseline fuerte (nnU-Net) + Transformer-UNet (Swin) + ablación de fusión | ✅ 3 de 3 pilares resueltos (ablación cerrada como negativo defendible) |
 | **Ambicioso** | Robustez ante modalidades faltantes / fusión neuronal | ⬜ No iniciado |
 
 Estado por pilar del objetivo defendible:
 
 | Pilar | Estado |
 | :-- | :-- |
-| Ablación de fusión | 🔴 Multi-semilla (3 semillas): `adaptive_gating` mean+std **no supera** a concat de forma robusta (0.527 ± 0.198 vs concat 0.621 ± 0.025; colapsa en 1 de 3 semillas). El margen de 1 semilla era ruido. Encamina a **resultado negativo defendible** (queda opcional: multi-semilla de la variante estabilizada) |
+| Ablación de fusión | ✅ **Cerrado (negativo defendible)**: la fusión adaptativa no supera robustamente a concat (mean+std 0.527±0.198 base / 0.521±0.199 estabilizada vs concat 0.621±0.025; colapsa en 1 de 3 semillas, la estabilización no lo evita). Vías agotadas. Contribución se reformula a estudio crítico de fusión |
 | Transformer-UNet (Swin-UNETR) | ✅ Entrenado en L4 (5000 pasos, 1 semilla): mean Dice val 0.715 (ET 0.567 / TC 0.745 / WT 0.834) |
 | Baseline fuerte (nnU-Net) | ✅ Entrenado en A100 (3d_fullres, fold 0, 250 épocas). **Referencia/techo**: mean Dice val 0.835 (ET 0.719 / TC 0.874 / WT 0.913) |
 
-**Mensaje clave:** el TFM ya supera el mínimo y tiene cerrados los pilares 1 y 2. nnU-Net marca el
-techo de referencia (mean Dice 0.835) y Swin-UNETR es el mejor de los modelos propios (0.715),
-resolviendo el riesgo título vs. evidencia. Falta consolidar el pilar 3 (ablación de fusión), en
-duda por el bajo rendimiento de la fusión adaptativa. **Aviso:** la comparativa actual mezcla
-presupuestos (nnU-Net a convergencia vs. modelos propios a 5000 pasos); la comparación
-arquitectónica justa requiere la corrida final a convergencia para todos.
+**Mensaje clave:** los tres pilares del objetivo defendible están resueltos. nnU-Net marca el techo
+de referencia (mean Dice 0.835), Swin-UNETR es el mejor de los modelos propios (0.715) y resuelve el
+riesgo título vs. evidencia, y la ablación de fusión se cierra como **resultado negativo defendible**
+(la fusión adaptativa no supera robustamente a la concatenación; multi-semilla + estabilización lo
+confirman). La contribución se reformula de "mejora por fusión adaptativa" a **estudio crítico de
+estrategias de fusión multimodal**. **Aviso:** la comparativa actual mezcla presupuestos (nnU-Net a
+convergencia vs. modelos propios a 5000 pasos); la comparación arquitectónica justa requiere la
+corrida final a convergencia para todos, con evaluación sobre test.
 
 **Restricciones confirmadas por el alumno (2026-06-26):**
 

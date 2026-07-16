@@ -1,6 +1,6 @@
 # Bitacora metodologica del TFM
 
-Ultima actualizacion: 2026-07-16 (pilar 3, multi-semilla: la fusion mean+std NO mejora de forma robusta a concat; margen de 1 semilla era ruido, con alta varianza y colapso dependiente de semilla)
+Ultima actualizacion: 2026-07-17 (pilar 3 CERRADO como resultado negativo defendible: la fusion adaptativa no mejora robustamente a concat; la estabilizacion tampoco evita el colapso por semilla; vias agotadas)
 
 Este documento registra, de forma incremental, la metodologia seguida durante el TFM. Su objetivo no es duplicar la memoria final, sino conservar la trazabilidad de lo que se decide, por que se decide, como se ejecuta y que evidencia queda disponible para justificarlo despues en el documento final.
 
@@ -1196,3 +1196,31 @@ Estado del presupuesto (2-3 dias): consumido ~1 dia (exploracion de 4 variantes 
 Artefactos: `outputs/evaluation/multiseed_*_val_metrics_summary.json`, `outputs/evaluation/multiseed_meanstd_vs_concat.csv`, `scratchpad/run_multiseed_meanstd_vs_concat.sh`, `scripts/aggregate_multiseed.py`.
 
 Pendiente / decision abierta: cerrar el pilar 3 como resultado negativo defendible, o gastar la ultima via (multi-semilla de la variante estabilizada) antes de cerrar. Decision del alumno.
+
+## 2026-07-17 - Pilar 3 CERRADO: resultado negativo defendible (ultima via agotada)
+
+Actividad realizada: se ejecuta la ultima via acordada antes de cerrar en negativo: multi-semilla (3 semillas) de la variante ESTABILIZADA `mean+std` + `gate_stab`, por si la estabilizacion evitaba el colapso por semilla de la variante base. 2 semillas nuevas (20260527, 20260528) reutilizando la semilla A (R3, 0.653). Via `scratchpad/run_multiseed_meanstd_stab.sh`.
+
+Resultado final del pilar 3 (val, 3 semillas por modelo). Fuente: `outputs/evaluation/multiseed_pillar3_final.csv`.
+
+| Modelo | mean Dice (3 semillas) | semilla A | 20260527 | 20260528 |
+|---|---|---|---|---|
+| concat | 0.621 +/- 0.025 | 0.607 | 0.629 | 0.629 |
+| mean+std (base) | 0.527 +/- 0.198 | 0.661 | 0.246 | 0.673 |
+| mean+std + estabilizacion | 0.521 +/- 0.199 | 0.653 | 0.246 | 0.670 |
+
+Hallazgo decisivo: la estabilizacion NO evita el colapso. La semilla 20260527 se hunde (ET ~0.076, mean ~0.246) tanto en la variante base como en la estabilizada; es la MISMA semilla la que colapsa en ambas. Es un fallo del mecanismo de compuerta ante la inicializacion/orden de augmentation que warmup + lr bajo + entropia no corrigen.
+
+Veredicto (pilar 3 cerrado): resultado NEGATIVO DEFENDIBLE. La fusion adaptativa no mejora de forma robusta a la concatenacion en este montaje:
+
+- concat es estable y reproducible (0.621 +/- 0.025).
+- La fusion adaptativa (mean+std, con o sin estabilizacion) queda por debajo de media (0.52-0.53) y con varianza ~8x mayor, por colapsar en 1 de cada 3 semillas.
+- Evidencia mecanicista coherente: el diagnostico mostro que la compuerta es estatica (no adaptativa de verdad); el "positivo" de una sola semilla era ruido; la estabilizacion no rescata la robustez.
+
+Vias agotadas dentro del alcance y presupuesto (2-3 dias, consumido ~1.5 dias): (1) estabilizacion via warmup/lr/entropia; (2) condicionamiento mas rico mean+std; (3) temperatura; (4) multi-semilla de la variante base; (5) multi-semilla de la variante estabilizada. Cumple el criterio del tutor de no aceptar el negativo hasta agotar vias.
+
+Impacto en la memoria final: la respuesta a la pregunta de investigacion es negativa y esta respaldada por evidencia solida (diagnostico + multi-semilla + ablacion de estabilizacion). Es un resultado valido y publicable: una fusion adaptativa por compuerta condicionada por descriptores globales no supera a la concatenacion estandar en BraTS-GLI y ademas introduce inestabilidad de entrenamiento dependiente de semilla. La concatenacion se confirma como baseline de fusion robusto. Se redactara en Resultados/Conclusiones con esta precision, y la contribucion se reformula de "mejora" a "estudio critico de estrategias de fusion multimodal".
+
+Estado de pilares: los tres resueltos. Pilar 1 (nnU-Net, referencia 0.835) y pilar 2 (Swin-UNETR, mejor modelo propio 0.715) cerrados en positivo; pilar 3 (ablacion de fusion) cerrado en negativo defendible. El objetivo defendible del TFM queda cubierto.
+
+Pendientes: corrida final unificada (mas pasos a convergencia + multi-semilla) de los modelos que iran a la tabla final, y evaluacion sobre el split `test` reservado con la configuracion congelada; luego redaccion de los capitulos con los numeros finales.

@@ -1,0 +1,43 @@
+{
+  "aggregates": {
+    "ET_dice": {
+      "count": 243,
+      "finite_count": 243,
+      "mean": 0.4989689761773544,
+      "median": 0.6044151450752483
+    },
+    "ET_hd95": {
+      "count": 243,
+      "finite_count": 195,
+      "mean": 9.777212509982903,
+      "median": 4.123105625617661
+    },
+    "TC_dice": {
+      "count": 243,
+      "finite_count": 243,
+      "mean": 0.7104624627620792,
+      "median": 0.7845408793087076
+    },
+    "TC_hd95": {
+      "count": 243,
+      "finite_count": 234,
+      "mean": 12.120237848029692,
+      "median": 4.794697622694892
+    },
+    "WT_dice": {
+      "count": 243,
+      "finite_count": 243,
+      "mean": 0.8013564863693516,
+      "median": 0.8483076419265047
+    },
+    "WT_hd95": {
+      "count": 243,
+      "finite_count": 243,
+      "mean": 16.538423229153725,
+      "median": 4.898979485566356
+    }
+  },
+  "cases": 243,
+  "output_csv": "outputs/evaluation/multiseed_meanstd_stab_seed20260528_val_metrics.csv",
+  "predictions_dir": "outputs/predictions/multiseed_meanstd_stab_seed20260528_val"
+}
