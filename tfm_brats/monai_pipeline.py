@@ -730,6 +730,29 @@ def train_one_run(
     fusion_warmup_steps = int(training_config.get("fusion_warmup_steps", 0))
     fusion_entropy_weight = float(training_config.get("fusion_entropy_weight", 0.0))
 
+    # Learning-rate schedule (default 'none' = constant lr, backward compatible).
+    # 'cosine' does linear warmup then cosine decay to lr_min_factor*base over the
+    # full step budget, per param group (so a separate fusion_lr is respected).
+    lr_scheduler_name = str(training_config.get("lr_scheduler", "none")).lower()
+    lr_warmup_steps = int(training_config.get("lr_warmup_steps", 0))
+    lr_min_factor = float(training_config.get("lr_min_factor", 0.01))
+    base_lrs = [group["lr"] for group in optimizer.param_groups]
+    total_scheduled_steps = step_limit if step_limit else max_epochs * max(1, len(train_loader))
+
+    def _apply_lr_schedule(step: int) -> None:
+        if lr_scheduler_name != "cosine":
+            return
+        import math
+
+        if lr_warmup_steps > 0 and step < lr_warmup_steps:
+            factor = (step + 1) / lr_warmup_steps
+        else:
+            denom = max(1, total_scheduled_steps - lr_warmup_steps)
+            progress = min(1.0, max(0.0, (step - lr_warmup_steps) / denom))
+            factor = lr_min_factor + (1.0 - lr_min_factor) * 0.5 * (1.0 + math.cos(math.pi * progress))
+        for group, base in zip(optimizer.param_groups, base_lrs):
+            group["lr"] = base * factor
+
     global_step = 0
     total_patches = 0
     losses: list[float] = []
@@ -770,6 +793,7 @@ def train_one_run(
             images = batch["image"].to(device, non_blocking=True)
             labels = batch["label"].to(device, non_blocking=True).float()
             patches = int(images.shape[0])
+            _apply_lr_schedule(global_step)
             if is_adaptive_gating and fusion_warmup_steps > 0:
                 # Ramp the gate in from identity over the warmup window.
                 fusion_module.warmup_alpha.fill_(min(1.0, global_step / fusion_warmup_steps))
@@ -961,6 +985,10 @@ def train_one_run(
         "cache_rate": cache_rate if cache_mode.lower() == "memory" else None,
         "cache_num": cache_num if cache_mode.lower() == "memory" else None,
         "cache_dir": cache_dir_base if cache_mode.lower() == "persistent" else None,
+        "lr_scheduler": lr_scheduler_name,
+        "lr_warmup_steps": lr_warmup_steps if lr_scheduler_name == "cosine" else None,
+        "lr_min_factor": lr_min_factor if lr_scheduler_name == "cosine" else None,
+        "total_scheduled_steps": total_scheduled_steps if lr_scheduler_name == "cosine" else None,
         "fusion_lr": float(fusion_lr) if fusion_lr is not None else None,
         "fusion_weight_decay": float(fusion_weight_decay) if fusion_weight_decay is not None else None,
         "fusion_warmup_steps": fusion_warmup_steps if is_adaptive_gating else None,
