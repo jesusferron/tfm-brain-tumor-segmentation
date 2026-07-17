@@ -1,6 +1,6 @@
 # Bitacora metodologica del TFM
 
-Ultima actualizacion: 2026-07-17 (pilar 3 CERRADO como resultado negativo defendible: la fusion adaptativa no mejora robustamente a concat; la estabilizacion tampoco evita el colapso por semilla; vias agotadas)
+Ultima actualizacion: 2026-07-17 (Track A: scheduler cosine anadido y sonda de convergencia -> presupuesto final fijado en 15000 pasos; concat convergido ~0.69 vs 0.607 a 5000 pasos)
 
 Este documento registra, de forma incremental, la metodologia seguida durante el TFM. Su objetivo no es duplicar la memoria final, sino conservar la trazabilidad de lo que se decide, por que se decide, como se ejecuta y que evidencia queda disponible para justificarlo despues en el documento final.
 
@@ -1224,3 +1224,32 @@ Impacto en la memoria final: la respuesta a la pregunta de investigacion es nega
 Estado de pilares: los tres resueltos. Pilar 1 (nnU-Net, referencia 0.835) y pilar 2 (Swin-UNETR, mejor modelo propio 0.715) cerrados en positivo; pilar 3 (ablacion de fusion) cerrado en negativo defendible. El objetivo defendible del TFM queda cubierto.
 
 Pendientes: corrida final unificada (mas pasos a convergencia + multi-semilla) de los modelos que iran a la tabla final, y evaluacion sobre el split `test` reservado con la configuracion congelada; luego redaccion de los capitulos con los numeros finales.
+
+## 2026-07-17 - Track A: scheduler cosine y sonda de convergencia
+
+Actividad realizada: se prepara la corrida final (alcance completo, 3 semillas, A100 para Swin, decidido por el alumno). Se anade un scheduler de LR cosine con warmup a la pipeline y se ejecuta una sonda de convergencia para fijar el presupuesto de pasos con evidencia en vez de a ojo.
+
+Cambios de codigo: `train_one_run` gana `lr_scheduler` (none|cosine), `lr_warmup_steps`, `lr_min_factor`. Cosine: warmup lineal y luego decaimiento coseno hasta `lr_min_factor`*base sobre el total de pasos, por grupo de parametros (respeta un `fusion_lr` distinto). Por defecto `none` (retrocompatible). Verificado con smoke (warmup 5 pasos -> pico -> cosine) y 17 tests OK. Config `configs/training/mac_m4_pro_128_final.yaml` (cosine, warmup 1000, patch 128).
+
+Sonda: concat a 25000 pasos con cosine, M4 Pro MPS, validando por epoca (8 batches). Resultado (`outputs/train/probe_concat_25k`):
+
+| epoca | paso | mean_dice (val 8b) |
+|---|---|---|
+| 5 | 5675 | 0.625 |
+| 9 | 10215 | 0.651 |
+| 11 | 12485 | 0.686 |
+| 15 | 17025 | 0.685 |
+| 19 | 21565 | 0.691 (best) |
+| 22 | 25000 | 0.688 |
+
+Conclusion: la curva mesetea en la epoca ~11 (paso ~12500). De la epoca 11 a la 19 solo sube +0.005 (ruido de la validacion de 8 batches). Convergido, concat pasa de 0.607 (5000 pasos) a ~0.69: la ganancia real (~+0.08) esta sobre todo en TC/WT (que saturan ~0.87) y algo en ET (~0.32, ruidoso). Confirma que 5000 pasos infra-entrenaban.
+
+Decision de presupuesto: corrida final a **15000 pasos** (~13 epocas) con cosine LR sobre 15000 y warmup 1000. Captura toda la ganancia (la meseta) y recorta ~40% frente a 25000. best.pt se selecciona por validacion como siempre.
+
+Estimacion de coste de la matriz completa a 15000 pasos:
+- Modelos residuales (~1.2 s/paso en M4): ~5 h/run. Ablacion de fusion (concat, global_weighted, adaptive_gating, adaptive_gating_meanstd) x 3 semillas = 12 runs ~= 3 dias en local (tandas nocturnas).
+- Attention U-Net es lento en MPS (~4.75 s/paso -> ~20 h/run): se movera a cloud junto con Swin.
+- Swin-UNETR x 3 semillas: A100 (a convergencia).
+- nnU-Net: se reutiliza el existente como referencia (1 corrida); multi-fold queda fuera para acotar coste de A100.
+
+Pendiente: aprobar el reparto local/cloud y lanzar; luego predict + evaluate sobre `test` (no val) y agregacion multi-semilla para las tablas finales.
