@@ -112,15 +112,20 @@ def comparison_architectures(cid, origin):
     t1c, gt = load_case(cid, origin)
     reg_gt = gt_regions(gt)
     z = int(np.argmax(reg_gt["WT"].sum(axis=(0, 1))))
+    panels = [("Ground truth", reg_gt)]
+    # nnU-Net output uses raw BraTS labels (0-4) -> gt_regions convention.
+    nnunet = ROOT / f"outputs/predictions/figA_nnunet/{cid}.nii.gz"
+    if nnunet.exists():
+        panels.append(("nnU-Net (ref.)", gt_regions(np.asarray(nib.load(nnunet).dataobj))))
+    # tfm_brats predictions use the regions_to_labelmap encoding -> pred_regions.
     preds = {
         "Swin-UNETR": ROOT / f"outputs/predictions/figA_swin/{cid}.nii.gz",
         "Attention U-Net": ROOT / f"outputs/predictions/figA_attention/{cid}.nii.gz",
         "Residual + concat": ROOT / f"outputs/predictions/final_concat_seed20260526_test/{cid}.nii.gz",
     }
-    panels = [("Ground truth", reg_gt)]
     for name, p in preds.items():
         panels.append((name, pred_regions(np.asarray(nib.load(p).dataobj))))
-    fig, axs = plt.subplots(1, 4, figsize=(15, 4.3))
+    fig, axs = plt.subplots(1, len(panels), figsize=(3.7 * len(panels), 4.3))
     for ax, (title, reg) in zip(axs, panels):
         overlay(ax, t1c[:, :, z], {k: v[:, :, z] for k, v in reg.items()}, title)
     legend = [mpatches.Patch(color=COLORS[k][:3], label=k) for k in ("ET", "TC", "WT")]

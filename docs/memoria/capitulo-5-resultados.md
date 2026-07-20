@@ -132,17 +132,18 @@ eficiencia, en contra de adoptar la fusión adaptativa.
 ## 5.5. Resultados cualitativos
 
 Además de las métricas agregadas, resulta ilustrativo inspeccionar las segmentaciones. La Figura 3
-compara cualitativamente las principales arquitecturas propias sobre un caso de test representativo
-(BraTS-GLI-02273-100), en el corte axial de mayor extensión tumoral, con las regiones anidadas (WT
-en amarillo, TC en naranja, ET en rojo). Swin-UNETR y Attention U-Net reproducen fielmente la
-extensión del tumor completo y del núcleo realzante; el modelo residual con concatenación es algo
-más impreciso en los bordes, de forma coherente con la jerarquía cuantitativa de la §5.2.
+compara cualitativamente las arquitecturas sobre un caso de test representativo (BraTS-GLI-02273-100),
+en el corte axial de mayor extensión tumoral, con las regiones anidadas (WT en amarillo, TC en
+naranja, ET en rojo). nnU-Net produce los contornos más limpios; Swin-UNETR y Attention U-Net
+reproducen fielmente la extensión del tumor completo y del núcleo realzante; el modelo residual con
+concatenación es algo más impreciso en los bordes. La gradación visual es coherente con la jerarquía
+cuantitativa de la §5.2.
 
-![Comparación cualitativa de arquitecturas: ground truth, Swin-UNETR, Attention U-Net y Residual + concat.](figuras/fig_comparacion_arquitecturas.png)
+![Comparación cualitativa de arquitecturas: ground truth, nnU-Net, Swin-UNETR, Attention U-Net y Residual + concat.](figuras/fig_comparacion_arquitecturas.png)
 
 **Figura 3.** Comparación cualitativa de arquitecturas sobre un caso de test (BraTS-GLI-02273-100,
-corte axial). De izquierda a derecha: *ground truth*, Swin-UNETR, Attention U-Net y Residual U-Net
-con concatenación. Regiones anidadas ET ⊂ TC ⊂ WT.
+corte axial). De izquierda a derecha: *ground truth*, nnU-Net (referencia), Swin-UNETR, Attention
+U-Net y Residual U-Net con concatenación. Regiones anidadas ET ⊂ TC ⊂ WT.
 
 La Figura 4 ilustra visualmente el colapso de la fusión adaptativa descrito en §5.3. Sobre el mismo
 caso y corte, se comparan el *ground truth*, la predicción del modelo con concatenación (estable) y
@@ -158,8 +159,8 @@ De izquierda a derecha: *ground truth*, predicción del modelo con concatenació
 predicción de la compuerta adaptativa en una semilla colapsada.
 
 (Las figuras se han generado a partir de las predicciones sobre test: la familia residual en local
-y Swin-UNETR/Attention U-Net regeneradas para este caso desde los *checkpoints* de las corridas en
-la nube. La numeración de figuras es consecutiva global: las Figuras 1 y 2 son los diagramas de
+y Swin-UNETR, Attention U-Net y nnU-Net regenerados para este caso desde los modelos de las corridas
+en la nube. La numeración de figuras es consecutiva global: las Figuras 1 y 2 son los diagramas de
 flujo y de arquitectura del Capítulo 4.)
 
 ## 5.6. Síntesis de resultados
