@@ -50,12 +50,15 @@ Ruta crítica; cada paso habilita el siguiente:
    preprocesado desbordaba el disco; ver [vitácora 2026-07-14](../vitacora/README.md)).
 2. ✅ **Swin-UNETR entrenado** en L4 (Transformer que da nombre al TFM). *(Pilar 2)*
 3. ✅ **nnU-Net entrenado y evaluado** como baseline fuerte externo (mean Dice val 0.835). *(Pilar 1)*
-4. **Resolver `adaptive_gating`** — corrida larga + warmup / lr específico de la compuerta /
-   regularización; decide si la hipótesis es positiva o vira a resultado negativo defendible.
-   Independiente; abordable en local. *(Pilar 3)*
-5. **Corrida final** — más pasos + multi-semilla (barras de error) → **evaluación sobre el split
-   de test reservado** (hasta ahora solo se ha tocado val).
-6. *(Ambicioso, opcional)* TransBTS; robustez ante modalidades degradadas/faltantes.
+4. ✅ **`adaptive_gating` resuelto** — resultado negativo defendible: colapsa en ~1 de 3 semillas
+   (a convergencia, sobre test). *(Pilar 3)*
+5. ✅ **Corrida final COMPLETA** — 15000 pasos + cosine LR + 3 semillas, evaluada sobre **test**.
+   Tabla del Cap. 5 en `outputs/evaluation/final_all_test.csv` y [vitácora 2026-07-20](../vitacora/README.md).
+6. *(Ambicioso, opcional, NO abordado)* TransBTS; robustez ante modalidades degradadas/faltantes.
+
+**Track A cerrado.** Tabla final (test, mean Dice): nnU-Net 0.829 (ref) · Swin 0.752±0.017 ·
+Attention 0.735±0.006 · concat 0.706±0.006 · global_weighted 0.706±0.007 · adaptive_gating
+0.586±0.169 · adaptive_gating_meanstd 0.592±0.171 (las dos adaptativas colapsan en 1 de 3 semillas).
 
 Decisiones de hardware (ver vitácora): **L4 para desarrollo/optimización, A100 solo para las
 corridas finales largas.** Cualquier cambio de hiperparámetros se registra en la vitácora con su
@@ -105,8 +108,8 @@ Tareas transversales:
 - [ ] Resolver `adaptive_gating`.
 - [ ] Corrida final multi-semilla + evaluación en test.
 
-**Cuando haya resultados consolidados:**
-- [ ] Capítulo 5 (Resultados) con la comparativa final.
+**Cuando haya resultados consolidados:** ✅ resultados finales sobre test disponibles (2026-07-20).
+- [ ] Capítulo 5 (Resultados) con la comparativa final (tabla en `outputs/evaluation/final_all_test.csv`).
 - [ ] Introducción, Marco teórico/Estado del arte, Conclusiones.
 
 ## 5. Riesgos abiertos

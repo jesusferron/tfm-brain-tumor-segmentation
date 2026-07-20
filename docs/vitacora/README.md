@@ -1,6 +1,6 @@
 # Bitacora metodologica del TFM
 
-Ultima actualizacion: 2026-07-17 (Track A: scheduler cosine anadido y sonda de convergencia -> presupuesto final fijado en 15000 pasos; concat convergido ~0.69 vs 0.607 a 5000 pasos)
+Ultima actualizacion: 2026-07-20 (Track A COMPLETO: corrida final a convergencia + multi-semilla evaluada sobre TEST; tabla del Cap.5 cerrada)
 
 Este documento registra, de forma incremental, la metodologia seguida durante el TFM. Su objetivo no es duplicar la memoria final, sino conservar la trazabilidad de lo que se decide, por que se decide, como se ejecuta y que evidencia queda disponible para justificarlo despues en el documento final.
 
@@ -1253,3 +1253,30 @@ Estimacion de coste de la matriz completa a 15000 pasos:
 - nnU-Net: se reutiliza el existente como referencia (1 corrida); multi-fold queda fuera para acotar coste de A100.
 
 Pendiente: aprobar el reparto local/cloud y lanzar; luego predict + evaluate sobre `test` (no val) y agregacion multi-semilla para las tablas finales.
+
+## 2026-07-20 - Track A COMPLETO: tabla final sobre TEST (Cap. 5)
+
+Actividad realizada: se completa la corrida final unificada (alcance completo, 3 semillas, 15000 pasos, cosine LR) y se evalua TODO sobre el split `test` reservado (243 casos), por primera vez. Reparto ejecutado: ablacion de fusion en local (M4, `scratchpad/run_final_fusion_ablation.sh`, 12 corridas), Swin-UNETR y Attention U-Net en A100 (notebook `colab_final_a100.ipynb`, 3 semillas cada uno), nnU-Net reutilizado y evaluado sobre test por inferencia (notebook `colab_nnunet_test_eval.ipynb`). Agregacion con `scripts/aggregate_multiseed.py`. Resultados en `outputs/evaluation/final_all_test.csv` y summaries por corrida; artefactos de A100/nnU-Net en Drive (`TFM-resultados/`).
+
+Tabla final (test, mean Dice; 3 semillas salvo nnU-Net que es 1 corrida de referencia):
+
+| Modelo | mean Dice | ET | TC | WT |
+|---|---|---|---|---|
+| nnU-Net 3d_fullres (referencia) | 0.829 | 0.713 | 0.864 | 0.911 |
+| Swin-UNETR | 0.752 +/- 0.017 | 0.624 | 0.774 | 0.857 |
+| Attention U-Net | 0.735 +/- 0.006 | 0.572 | 0.770 | 0.861 |
+| residual concat (baseline fusion) | 0.706 +/- 0.006 | 0.548 | 0.729 | 0.841 |
+| residual global_weighted | 0.706 +/- 0.007 | 0.550 | 0.727 | 0.840 |
+| residual adaptive_gating | 0.586 +/- 0.169 | 0.404 | 0.585 | 0.770 |
+| residual adaptive_gating_meanstd | 0.592 +/- 0.171 | 0.419 | 0.591 | 0.765 |
+
+Hallazgos definitivos (sobre test, convergido, multi-semilla):
+
+- Jerarquia de arquitecturas: nnU-Net (0.829, techo de referencia) > Swin-UNETR (0.752, mejor modelo propio, robusto) > Attention U-Net (0.735) > familia residual de fusion (~0.71 los estables). Swin respalda el titulo del TFM.
+- Ablacion de fusion: concat (0.706) y global_weighted (0.706) son estadisticamente identicos y muy estables (+/-0.006). NINGUNA fusion supera a la concatenacion.
+- Las dos variantes de fusion adaptativa colapsan en 1 de 3 semillas, en semillas DISTINTAS: adaptive_gating en la 20260528 (0.347), meanstd en la 20260527 (0.349). No es un fallo puntual de una semilla concreta: la compuerta adaptativa tiene ~1/3 de probabilidad de colapsar independientemente de la inicializacion. Confirma, con la evidencia mas fuerte (test, convergencia, multi-semilla), el resultado negativo del pilar 3.
+- Consistencia val/test: nnU-Net 0.835 (val) -> 0.829 (test); concat converge a ~0.69 (val, sonda) -> 0.706 (test). Sin sobreajuste apreciable.
+
+Conclusion del Track A: todos los pilares resueltos y cuantificados sobre test. La contribucion (fusion adaptativa) queda como estudio critico con resultado negativo defendible: la complejidad anadida de la fusion no aporta sobre la concatenacion y, cuando intenta ser mas expresiva (compuerta), introduce inestabilidad (colapso ~1/3). La concatenacion se confirma como estrategia de fusion robusta y suficiente.
+
+Pendiente: Track B (redaccion) con estos numeros: tabla comparativa y estudio de ablacion en el Cap. 5, y la narrativa de la contribucion en Conclusiones. Nota: nnU-Net es 1 corrida (referencia), el resto 3 semillas; indicarlo en la tabla.

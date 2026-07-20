@@ -1,0 +1,43 @@
+{
+  "aggregates": {
+    "ET_dice": {
+      "count": 243,
+      "finite_count": 243,
+      "mean": 0.5672134694046053,
+      "median": 0.7114199554215288
+    },
+    "ET_hd95": {
+      "count": 243,
+      "finite_count": 194,
+      "mean": 8.308925475768046,
+      "median": 2.449489742783178
+    },
+    "TC_dice": {
+      "count": 243,
+      "finite_count": 243,
+      "mean": 0.7344870270064467,
+      "median": 0.8187684567428634
+    },
+    "TC_hd95": {
+      "count": 243,
+      "finite_count": 238,
+      "mean": 11.061072408081825,
+      "median": 4.58257569495584
+    },
+    "WT_dice": {
+      "count": 243,
+      "finite_count": 243,
+      "mean": 0.832265810393085,
+      "median": 0.871686274509804
+    },
+    "WT_hd95": {
+      "count": 243,
+      "finite_count": 243,
+      "mean": 11.107218609782253,
+      "median": 4.123105625617661
+    }
+  },
+  "cases": 243,
+  "output_csv": "outputs/evaluation/final_adaptive_gating_meanstd_seed20260526_test_metrics.csv",
+  "predictions_dir": "outputs/predictions/final_adaptive_gating_meanstd_seed20260526_test"
+}

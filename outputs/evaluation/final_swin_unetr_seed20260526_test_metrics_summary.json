@@ -1,0 +1,43 @@
+{
+  "aggregates": {
+    "ET_dice": {
+      "count": 243,
+      "finite_count": 243,
+      "mean": 0.6274726508617001,
+      "median": 0.7889961954931226
+    },
+    "ET_hd95": {
+      "count": 243,
+      "finite_count": 199,
+      "mean": 6.231093969277698,
+      "median": 2.0
+    },
+    "TC_dice": {
+      "count": 243,
+      "finite_count": 243,
+      "mean": 0.7646903522346592,
+      "median": 0.8576745175182093
+    },
+    "TC_hd95": {
+      "count": 243,
+      "finite_count": 238,
+      "mean": 8.367713968657096,
+      "median": 3.605551275463989
+    },
+    "WT_dice": {
+      "count": 243,
+      "finite_count": 243,
+      "mean": 0.8577479529335151,
+      "median": 0.9037244062876378
+    },
+    "WT_hd95": {
+      "count": 243,
+      "finite_count": 243,
+      "mean": 8.946299327766667,
+      "median": 3.1622776601683795
+    }
+  },
+  "cases": 243,
+  "output_csv": "outputs/evaluation/final_swin_unetr_seed20260526_test_metrics.csv",
+  "predictions_dir": "outputs/predictions/final_swin_unetr_seed20260526_test"
+}

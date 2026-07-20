@@ -1,0 +1,43 @@
+{
+  "aggregates": {
+    "ET_dice": {
+      "count": 243,
+      "finite_count": 243,
+      "mean": 0.5647565291764055,
+      "median": 0.7465618860510805
+    },
+    "ET_hd95": {
+      "count": 243,
+      "finite_count": 186,
+      "mean": 7.851156856946303,
+      "median": 2.23606797749979
+    },
+    "TC_dice": {
+      "count": 243,
+      "finite_count": 243,
+      "mean": 0.7679773259528678,
+      "median": 0.8719754288710765
+    },
+    "TC_hd95": {
+      "count": 243,
+      "finite_count": 237,
+      "mean": 7.945084622684292,
+      "median": 3.1622776601683795
+    },
+    "WT_dice": {
+      "count": 243,
+      "finite_count": 243,
+      "mean": 0.8608977209102623,
+      "median": 0.9111158225559034
+    },
+    "WT_hd95": {
+      "count": 243,
+      "finite_count": 243,
+      "mean": 7.406275950572598,
+      "median": 2.8284271247461903
+    }
+  },
+  "cases": 243,
+  "output_csv": "outputs/evaluation/final_attention_unet_3d_seed20260526_test_metrics.csv",
+  "predictions_dir": "outputs/predictions/final_attention_unet_3d_seed20260526_test"
+}

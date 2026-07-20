@@ -1,0 +1,43 @@
+{
+  "aggregates": {
+    "ET_dice": {
+      "count": 243,
+      "finite_count": 243,
+      "mean": 0.5356995458722457,
+      "median": 0.6772394272394272
+    },
+    "ET_hd95": {
+      "count": 243,
+      "finite_count": 194,
+      "mean": 9.352433109959142,
+      "median": 3.08113883008419
+    },
+    "TC_dice": {
+      "count": 243,
+      "finite_count": 243,
+      "mean": 0.7153197189499656,
+      "median": 0.8023612087139845
+    },
+    "TC_hd95": {
+      "count": 243,
+      "finite_count": 237,
+      "mean": 11.562812269119647,
+      "median": 4.58257569495584
+    },
+    "WT_dice": {
+      "count": 243,
+      "finite_count": 243,
+      "mean": 0.8442760090286819,
+      "median": 0.8823321429834176
+    },
+    "WT_hd95": {
+      "count": 243,
+      "finite_count": 243,
+      "mean": 10.76728991367956,
+      "median": 3.4641016151377544
+    }
+  },
+  "cases": 243,
+  "output_csv": "outputs/evaluation/final_concat_seed20260526_test_metrics.csv",
+  "predictions_dir": "outputs/predictions/final_concat_seed20260526_test"
+}

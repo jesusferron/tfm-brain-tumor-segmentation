@@ -1,0 +1,43 @@
+{
+  "aggregates": {
+    "ET_dice": {
+      "count": 243,
+      "finite_count": 243,
+      "mean": 0.7132047406095556,
+      "median": 0.8762641118301258
+    },
+    "ET_hd95": {
+      "count": 243,
+      "finite_count": 207,
+      "mean": 2.9517680692293364,
+      "median": 1.0
+    },
+    "TC_dice": {
+      "count": 243,
+      "finite_count": 243,
+      "mean": 0.8637986252915191,
+      "median": 0.9315565565565566
+    },
+    "TC_hd95": {
+      "count": 243,
+      "finite_count": 238,
+      "mean": 3.2700352043719936,
+      "median": 1.4142135623730951
+    },
+    "WT_dice": {
+      "count": 243,
+      "finite_count": 243,
+      "mean": 0.9106052250328163,
+      "median": 0.9433550816350141
+    },
+    "WT_hd95": {
+      "count": 243,
+      "finite_count": 242,
+      "mean": 3.332489797821024,
+      "median": 1.4142135623730951
+    }
+  },
+  "cases": 243,
+  "output_csv": "outputs/evaluation/nnunet_3dfullres_test_metrics.csv",
+  "predictions_dir": "/content/nnunet_pred_test"
+}
