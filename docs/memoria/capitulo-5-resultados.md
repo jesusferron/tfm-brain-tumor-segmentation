@@ -17,10 +17,10 @@ desviación. Las métricas son el coeficiente **Dice** y la distancia de **Hausd
 
 ## 5.2. Comparativa de arquitecturas
 
-La Tabla 11 presenta el Dice por región y el Dice medio de las tres regiones para las siete
-configuraciones evaluadas. La Tabla 12 recoge la métrica de frontera HD95 para las mismas.
+La Tabla 12 presenta el Dice por región y el Dice medio de las tres regiones para las siete
+configuraciones evaluadas. La Tabla 13 recoge la métrica de frontera HD95 para las mismas.
 
-**Tabla 11.** Coeficiente Dice sobre test (media ± desviación típica de tres semillas; nnU-Net es
+**Tabla 12.** Coeficiente Dice sobre test (media ± desviación típica de tres semillas; nnU-Net es
 una corrida de referencia). En negrita, el mejor valor de cada columna entre los modelos propios.
 
 | Modelo | Dice medio | ET | TC | WT |
@@ -33,7 +33,7 @@ una corrida de referencia). En negrita, el mejor valor de cada columna entre los
 | Residual U-Net + adaptive_gating | 0,586 ± 0,169 | 0,404 ± 0,200 | 0,585 ± 0,205 | 0,770 ± 0,102 |
 | Residual U-Net + adaptive_gating (media+std) | 0,592 ± 0,171 | 0,419 ± 0,211 | 0,591 ± 0,209 | 0,765 ± 0,095 |
 
-**Tabla 12.** Distancia HD95 (mm) sobre test por región (media de tres semillas; nnU-Net,
+**Tabla 13.** Distancia HD95 (mm) sobre test por región (media de tres semillas; nnU-Net,
 referencia). Valores menores son mejores. El HD95 se promedia solo sobre los casos con la región
 presente en predicción y referencia; en ET el número de casos finitos oscila entre 182 y 207 de
 243 según el modelo (menor cuando el modelo omite la región).
@@ -48,7 +48,7 @@ presente en predicción y referencia; en ET el número de casos finitos oscila e
 | Residual U-Net + adaptive_gating | 23,83 | 24,52 | 17,17 |
 | Residual U-Net + adaptive_gating (media+std) | 22,85 | 23,62 | 17,78 |
 
-Del contraste de arquitecturas (Tablas 11 y 12) se observa una **jerarquía clara**:
+Del contraste de arquitecturas (Tablas 12 y 13) se observa una **jerarquía clara**:
 
 - **nnU-Net** es el mejor modelo con diferencia (Dice medio 0,829), y su ventaja es especialmente
   marcada en la métrica de frontera: sus HD95 (~3 mm en las tres regiones) son de dos a tres veces
@@ -67,10 +67,10 @@ Del contraste de arquitecturas (Tablas 11 y 12) se observa una **jerarquía clar
 ## 5.3. Estudio de ablación de estrategias de fusión
 
 El estudio de ablación compara, sobre la **misma** U-Net residual 3D, las cuatro estrategias de
-fusión (§4.3.6). La Tabla 13 desglosa el Dice medio por semilla, lo que resulta esencial para
+fusión (§4.3.6). La Tabla 14 desglosa el Dice medio por semilla, lo que resulta esencial para
 interpretar la elevada desviación de las variantes adaptativas.
 
-**Tabla 13.** Dice medio sobre test por semilla para las cuatro estrategias de fusión (misma U-Net
+**Tabla 14.** Dice medio sobre test por semilla para las cuatro estrategias de fusión (misma U-Net
 residual 3D). Se resaltan las semillas en las que la compuerta adaptativa colapsa.
 
 | Estrategia de fusión | Semilla 26 | Semilla 27 | Semilla 28 | Media ± desv. |
@@ -88,11 +88,11 @@ Los resultados de la ablación son concluyentes:
   entrada —de forma estática— no aporta ninguna mejora sobre concatenarlas.
 - **La fusión adaptativa es inestable.** Ambas variantes de compuerta obtienen una media claramente
   inferior (0,586 y 0,592) y una desviación típica ~30 veces mayor. La causa es visible en la
-  Tabla 13: **cada variante colapsa en una de las tres semillas** —`adaptive_gating` en la semilla
+  Tabla 14: **cada variante colapsa en una de las tres semillas** —`adaptive_gating` en la semilla
   28 (0,347) y la variante media+std en la semilla 27 (0,349)—. Que el colapso ocurra en semillas
   **distintas** descarta que sea un problema de una inicialización concreta: la compuerta adaptativa
   introduce un riesgo de fallo del entrenamiento (~1 de cada 3 corridas) que las estrategias
-  estáticas no presentan. Los HD95 desorbitados de estas dos filas en la Tabla 12 (~23 mm) son
+  estáticas no presentan. Los HD95 desorbitados de estas dos filas en la Tabla 13 (~23 mm) son
   reflejo de ese mismo colapso.
 - Un diagnóstico complementario reveló que, incluso en las semillas en que no colapsa, la compuerta
   aprende pesos **casi idénticos entre casos** (su señal de condicionamiento es prácticamente
@@ -108,12 +108,12 @@ contribución (estudio crítico de estrategias de fusión) se desarrolla en el C
 
 ## 5.4. Coste computacional
 
-La Tabla 14 resume el coste de cada arquitectura. Los modelos residuales (incluidas las variantes
+La Tabla 15 resume el coste de cada arquitectura. Los modelos residuales (incluidas las variantes
 de fusión) comparten el mismo tamaño (~1,19 M parámetros); los bloques de fusión añaden un coste
 despreciable (4 y 48 parámetros). El Swin-UNETR es ~50 veces mayor que el *baseline* residual, lo
 que motivó su entrenamiento en GPU A100 y el uso opcional de *gradient checkpointing*.
 
-**Tabla 14.** Coste computacional por modelo: número de parámetros, entorno de entrenamiento y
+**Tabla 15.** Coste computacional por modelo: número de parámetros, entorno de entrenamiento y
 memoria de GPU aproximada. Los tiempos no son directamente comparables entre entornos (MPS vs.
 CUDA A100) y se ofrecen solo como orden de magnitud.
 

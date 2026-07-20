@@ -93,3 +93,32 @@ La calidad de la segmentación se cuantifica con dos métricas estandarizadas en
 Ambas métricas se calculan de forma independiente por región (ET, TC, WT), lo que permite analizar el
 comportamiento del modelo en cada subestructura. Su formalización operativa y las convenciones
 adoptadas (casos vacíos, casos con distancia indefinida) se detallan en el Capítulo 4.
+
+## 2.6. Repositorios y herramientas evaluados
+
+Para acotar el diseño experimental se revisaron los principales *frameworks* e implementaciones de
+segmentación médica 3D relevantes para BraTS, seleccionando los que se integran en el trabajo y
+documentando los descartados. La Tabla 2 resume esa evaluación: por cada herramienta se indica su
+tipo, el soporte 3D/multimodal, el papel previsto en el TFM y la decisión adoptada. Todas las
+opciones seleccionadas se distribuyen bajo licencias permisivas (Apache 2.0 o MIT), compatibles con
+el uso de datos BraTS-GLI bajo licencia CC-BY-NC.
+
+**Tabla 2.** Repositorios y herramientas de segmentación 3D evaluados como candidatos para el TFM.
+
+| Repositorio / herramienta | Tipo | 3D · multimodal | Rol en el TFM | Decisión |
+| :-- | :-- | :-: | :-- | :-- |
+| MONAI (Project-MONAI) | *Framework* | sí · sí | Base del *pipeline* propio | Usado |
+| Residual U-Net 3D (implementación propia sobre MONAI) | Arquitectura | sí · sí | *Baseline* convolucional y soporte del estudio de fusión | Usado |
+| Attention U-Net (MONAI) | Arquitectura | sí · sí | Variante atencional intermedia | Usado |
+| Swin-UNETR (MONAI) | Arquitectura Transformer | sí · sí | Transformer-UNet que da nombre al TFM | Usado |
+| nnU-Net v2 (MIC-DKFZ) | *Pipeline* auto-configurable | sí · sí | *Baseline* fuerte de referencia | Usado (externo) |
+| TransBTS (Wenxuan-1119) | Arquitectura híbrida CNN-Transformer | sí · sí | Modelo híbrido específico de tumores | Descartado (fuera del presupuesto de cómputo) |
+| Ganadores del reto BraTS | Referencias | — | Contexto del estado del arte | Referencia (no ejecutado) |
+
+Como se recoge en la Tabla 2, **MONAI se adopta como base** del *pipeline*; sobre ella se implementan
+el *baseline* residual y las variantes de fusión, y se integran de forma nativa Attention U-Net y
+Swin-UNETR. **nnU-Net** se emplea como *baseline* fuerte externo, dada su naturaleza
+auto-configurable y su papel de referencia en BraTS. **TransBTS** se revisó como candidato híbrido
+pero se descartó por el coste de portado e integración frente al presupuesto disponible, y los
+modelos ganadores del reto BraTS se citan como contexto sin ejecutarse. La justificación técnica de
+cada elección se retoma en el Capítulo 4.
