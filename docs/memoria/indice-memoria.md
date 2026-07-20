@@ -19,7 +19,7 @@ mediante arquitecturas Transformer-UNet híbridas**.
 | 3 | **Metodología** | Metodología *ad hoc* de 5 fases descritas de forma general + cronograma. **Sin detalle técnico** | ✅ Reorganizado por fases | [`capitulo-3-metodologia.md`](capitulo-3-metodologia.md) |
 | 4 | **Desarrollo** | Detalle técnico por fase (una sección por fase, en correspondencia con Metodología): entorno, datos/QC/splits, ETL, factory de modelos, fusión, hiperparámetros, inferencia, métricas | ✅ Reorganizado por fases | [`capitulo-4-desarrollo.md`](capitulo-4-desarrollo.md) |
 | 5 | **Resultados** | Comparativa de arquitecturas (Dice/HD95 por ET/TC/WT); estudio de ablación de fusión; coste computacional — todo sobre **test** (3 semillas) | ✅ Redactado con resultados finales | [`capitulo-5-resultados.md`](capitulo-5-resultados.md), `outputs/evaluation/final_all_test.csv` |
-| 6 | **Conclusiones** | Respuesta a la pregunta de investigación, limitaciones, líneas de trabajo futuro | ⬜ Pendiente | — |
+| 6 | **Conclusiones** | Respuesta a la pregunta de investigación (negativo defendible), grado de cumplimiento de objetivos, contribución como estudio crítico de fusión, limitaciones y trabajo futuro | ✅ Redactado | [`capitulo-6-conclusiones.md`](capitulo-6-conclusiones.md) |
 
 Material transversal: aspectos legales/licencia (CC-BY-NC 4.0, cita BraTS), tablas del dataset y
 estructura del repositorio (ya redactados en [`README.md`](README.md), a reubicar en los
