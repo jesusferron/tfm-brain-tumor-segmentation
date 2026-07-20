@@ -14,8 +14,8 @@ mediante arquitecturas Transformer-UNet híbridas**.
 
 | # | Capítulo | Contenido | Estado | Material de partida |
 | :-: | :-- | :-- | :-- | :-- |
-| 1 | **Introducción** | Background (gliomas, segmentación automática 3D), planteamiento del problema, pregunta de investigación, objetivos (general y específicos), organización del documento | ⬜ Pendiente | Objetivos y pregunta ya redactados en [`README.md`](README.md) |
-| 2 | **Marco teórico y estado del arte** | Segmentación médica 3D; U-Net y variantes; Transformers en imagen médica (Swin-UNETR, TransBTS); fusión multimodal de modalidades MRI; el reto BraTS; métricas Dice y HD95 | ⬜ Pendiente | Tabla comparativa de repositorios ([borrador](../pre-design/tabla-comparativa-repositorios-borrador.md)) |
+| 1 | **Introducción** | Contexto clínico y de IA, planteamiento del problema, pregunta de investigación, objetivos y organización del documento | ✅ Redactado (reescrito desde el borrador) | [`capitulo-1-introduccion.md`](capitulo-1-introduccion.md) |
+| 2 | **Marco teórico y estado del arte** | Segmentación médica 3D; U-Net y variantes; atención; Transformers (Swin-UNETR); nnU-Net; fusión multimodal (Tabla 1); reto BraTS y métricas Dice/HD95 | ✅ Redactado (reescrito y ampliado) | [`capitulo-2-marco-teorico.md`](capitulo-2-marco-teorico.md) |
 | 3 | **Metodología** | Metodología *ad hoc* de 5 fases descritas de forma general + cronograma. **Sin detalle técnico** | ✅ Reorganizado por fases | [`capitulo-3-metodologia.md`](capitulo-3-metodologia.md) |
 | 4 | **Desarrollo** | Detalle técnico por fase (una sección por fase, en correspondencia con Metodología): entorno, datos/QC/splits, ETL, factory de modelos, fusión, hiperparámetros, inferencia, métricas | ✅ Reorganizado por fases | [`capitulo-4-desarrollo.md`](capitulo-4-desarrollo.md) |
 | 5 | **Resultados** | Comparativa de arquitecturas (Dice/HD95 por ET/TC/WT); estudio de ablación de fusión; coste computacional — todo sobre **test** (3 semillas) | ✅ Redactado con resultados finales | [`capitulo-5-resultados.md`](capitulo-5-resultados.md), `outputs/evaluation/final_all_test.csv` |

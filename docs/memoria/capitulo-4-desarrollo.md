@@ -1,9 +1,8 @@
 # 4. Desarrollo
 
-> Versión reorganizada por **fases**, en correspondencia con el Capítulo 3 (véase la Tabla 2):
-> cada sección desarrolla el detalle técnico de una fase de la metodología. Numeración de tablas
-> **consecutiva global**, continuando desde el Capítulo 3 (la primera tabla de este capítulo es la
-> Tabla 4). Referencias de implementación citadas como `archivo.py`.
+> Versión reorganizada por **fases**, en correspondencia con la metodología del Capítulo 3: cada
+> sección desarrolla el detalle técnico de una fase. Numeración de tablas **consecutiva global**,
+> continuando desde el Capítulo 3. Referencias de implementación citadas como `archivo.py`.
 
 ## 4.1. Familiarización y selección de herramientas (Fase 1)
 
@@ -52,9 +51,9 @@ presencia o ausencia de tumor con realce (ET) y volumen tumoral total discretiza
 cuantiles. Esto asegura distribuciones comparables de tamaño y dificultad entre particiones. Se
 fija una **semilla** (`20260526`), de modo que la partición es determinista y se materializa en
 disco (`outputs/splits/brats_gli_2024_seed20260526/`) junto con un manifiesto de distribución. La
-Tabla 4 resume la distribución resultante.
+Tabla 5 resume la distribución resultante.
 
-**Tabla 4.** Distribución de las particiones del conjunto BraTS-GLI 2024.
+**Tabla 5.** Distribución de las particiones del conjunto BraTS-GLI 2024.
 
 | Partición | Casos | Proporción | Uso |
 | :-- | :-: | :-: | :-- |
@@ -72,12 +71,12 @@ convergencia.
 
 ### 4.3.1. Entorno de cómputo
 
-El procesamiento se llevó a cabo en dos entornos, resumidos en la Tabla 5. El entorno local se
+El procesamiento se llevó a cabo en dos entornos, resumidos en la Tabla 6. El entorno local se
 empleó para el desarrollo del *pipeline* y para el entrenamiento de los modelos ligeros; el
 entorno en la nube (Google Colab con acelerador NVIDIA A100) se reservó para el modelo más pesado
 (Swin-UNETR) y las corridas finales.
 
-**Tabla 5.** Entornos de cómputo empleados.
+**Tabla 6.** Entornos de cómputo empleados.
 
 | Entorno | Dispositivo | Precisión mixta (AMP) | Uso principal |
 | :-- | :-- | :-- | :-- |
@@ -99,11 +98,11 @@ entrenamiento, inferencia y *checkpointing*), `metrics.py` (Dice y HD95) y `cli.
 línea de comandos).
 
 El flujo experimental se expone como **cinco subcomandos** de una CLI unificada, que reflejan las
-fases operativas del trabajo (Tabla 6). Esta separación permite asegurar primero la integridad del
+fases operativas del trabajo (Tabla 7). Esta separación permite asegurar primero la integridad del
 dataset y del protocolo (`qc`, `splits`) antes de invertir cómputo, y desacopla la inferencia de la
 evaluación métrica para recalcular métricas sin repetir la inferencia.
 
-**Tabla 6.** Subcomandos de la interfaz de línea de comandos (`tfm_brats/cli.py`).
+**Tabla 7.** Subcomandos de la interfaz de línea de comandos (`tfm_brats/cli.py`).
 
 | Subcomando | Función |
 | :-- | :-- |
@@ -118,9 +117,9 @@ evaluación métrica para recalcular métricas sin repetir la inferencia.
 El modelo recibe un tensor con **cuatro canales** (modalidades T1n, T1c, T2w y FLAIR —denominada
 `T2f` en el dataset y el código—) y emite **tres canales de salida**, cada uno asociado a una
 subregión anidada del tumor según la convención BraTS. El código procesa y reporta las regiones en
-el orden **ET, TC, WT** (`tfm_brats/brats.py`), como recoge la Tabla 7.
+el orden **ET, TC, WT** (`tfm_brats/brats.py`), como recoge la Tabla 8.
 
-**Tabla 7.** Regiones tumorales BraTS, canales de salida y etiquetas incluidas.
+**Tabla 8.** Regiones tumorales BraTS, canales de salida y etiquetas incluidas.
 
 | Canal | Región | Etiquetas BraTS | Descripción |
 | :-: | :-- | :-- | :-- |
@@ -163,9 +162,9 @@ ventana deslizante (§4.5.1).
 La instanciación de las redes se centraliza en una función *factory*, `build_model`
 (`monai_pipeline.py`), que despacha según el campo `architecture` de la configuración, de modo que
 las cinco arquitecturas se definen íntegramente por YAML (`configs/model/`) compartiendo el mismo
-punto de entrada. Todas reciben 4 canales de entrada y emiten 3 de salida (Tabla 8).
+punto de entrada. Todas reciben 4 canales de entrada y emiten 3 de salida (Tabla 9).
 
-**Tabla 8.** Arquitecturas comparadas y sus parámetros.
+**Tabla 9.** Arquitecturas comparadas y sus parámetros.
 
 | Modelo | Clase MONAI | Hiperparámetros clave | Parámetros |
 | :-- | :-- | :-- | :-: |
@@ -240,7 +239,7 @@ comprueba si basta con reponderar estáticamente las modalidades, mientras que l
 
 ### 4.4.1. Configuración de entrenamiento e hiperparámetros
 
-Todos los modelos comparten la configuración de optimización de la Tabla 9, de manera que cualquier
+Todos los modelos comparten la configuración de optimización de la Tabla 10, de manera que cualquier
 diferencia en las métricas sea atribuible a la arquitectura y a su estrategia de fusión, y no a los
 hiperparámetros. El presupuesto de entrenamiento (número de pasos) se fijó empíricamente mediante
 una **sonda de convergencia**: una corrida larga del *baseline* mostró que la métrica de validación
@@ -248,7 +247,7 @@ alcanza su meseta en torno a los 12.000–15.000 pasos, por lo que se adoptaron 
 las corridas finales (una exploración preliminar previa se había realizado a 5.000 pasos, que
 resultaron insuficientes para converger).
 
-**Tabla 9.** Hiperparámetros del protocolo de entrenamiento final.
+**Tabla 10.** Hiperparámetros del protocolo de entrenamiento final.
 
 | Hiperparámetro | Valor |
 | :-- | :-- |

@@ -3,10 +3,9 @@
 > Versión reorganizada por **fases** siguiendo el criterio de la tutora: este capítulo describe
 > *qué* fases se siguieron y en qué consiste cada una, de forma general; el *cómo* (detalle
 > técnico, decisiones e implementación) se desarrolla en el Capítulo 4, con una sección por fase.
-> Nota sobre numeración: las tablas se numeran de forma **consecutiva global** (Tabla 1, 2, 3…) en
-> el orden de lectura de la memoria. Como los Capítulos 1 y 2 aún no están redactados, la
-> numeración de las tablas de los Capítulos 3–4 arranca provisionalmente en 1 y absorberá las
-> tablas de los capítulos previos al integrar la memoria completa.
+> Nota sobre numeración: las tablas siguen una numeración **consecutiva global** en el orden de
+> lectura de la memoria; el Capítulo 2 aporta la primera tabla, por lo que las de este capítulo la
+> continúan.
 
 ## 3.1. Enfoque metodológico
 
@@ -22,7 +21,7 @@ obtención y el análisis de los resultados. Las fases son en su mayoría secuen
 admiten realimentación: los hallazgos de la fase experimental, por ejemplo, motivaron ajustes en
 la fase de implementación. Este capítulo describe cada fase en términos generales; el desarrollo
 técnico de cada una se recoge en la sección homóloga del Capítulo 4 (véase la correspondencia en
-la Tabla 2).
+la Tabla 3).
 
 ## 3.2. Descripción general de las fases
 
@@ -51,9 +50,9 @@ los experimentos con varias semillas para estimar su variabilidad.
 cálculo de las métricas de segmentación por región y análisis comparativo de arquitecturas y
 estrategias de fusión, del que se derivan las conclusiones del trabajo.
 
-La Tabla 1 resume las cinco fases y sus actividades principales.
+La Tabla 2 resume las cinco fases y sus actividades principales.
 
-**Tabla 1.** Fases de la metodología *ad hoc* y actividades principales de cada una.
+**Tabla 2.** Fases de la metodología *ad hoc* y actividades principales de cada una.
 
 | Fase | Denominación | Actividades principales |
 | :-: | :-- | :-- |
@@ -66,10 +65,10 @@ La Tabla 1 resume las cinco fases y sus actividades principales.
 ## 3.3. Correspondencia entre metodología y desarrollo
 
 Siguiendo el criterio de organizar metodología y desarrollo en torno a las mismas fases, el
-Capítulo 4 dedica una sección al desarrollo técnico de cada una. La Tabla 2 establece esa
+Capítulo 4 dedica una sección al desarrollo técnico de cada una. La Tabla 3 establece esa
 correspondencia y sirve de guía de lectura entre ambos capítulos.
 
-**Tabla 2.** Correspondencia entre las fases de la metodología (Capítulo 3) y las secciones de
+**Tabla 3.** Correspondencia entre las fases de la metodología (Capítulo 3) y las secciones de
 desarrollo técnico (Capítulo 4).
 
 | Fase (Cap. 3) | Sección de desarrollo (Cap. 4) |
@@ -82,12 +81,12 @@ desarrollo técnico (Capítulo 4).
 
 ## 3.4. Cronograma
 
-El trabajo se desarrolló entre mayo y julio de 2026. La Tabla 3 presenta el cronograma por
+El trabajo se desarrolló entre mayo y julio de 2026. La Tabla 4 presenta el cronograma por
 fases; dado el carácter incremental de la metodología, algunas fases se solapan parcialmente
 (por ejemplo, la implementación del *pipeline* continuó ajustándose durante la experimentación a
 raíz de los hallazgos obtenidos).
 
-**Tabla 3.** Cronograma del proyecto por fases y actividades.
+**Tabla 4.** Cronograma del proyecto por fases y actividades.
 
 | Fase | Actividades | Periodo aproximado |
 | :-- | :-- | :-- |
