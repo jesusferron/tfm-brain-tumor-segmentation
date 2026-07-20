@@ -107,6 +107,30 @@ def norm_bg(v):
     return np.clip((v - lo) / (hi - lo + 1e-8), 0, 1)
 
 
+def comparison_architectures(cid, origin):
+    """4-panel qualitative comparison: ground truth vs Swin, Attention, concat."""
+    t1c, gt = load_case(cid, origin)
+    reg_gt = gt_regions(gt)
+    z = int(np.argmax(reg_gt["WT"].sum(axis=(0, 1))))
+    preds = {
+        "Swin-UNETR": ROOT / f"outputs/predictions/figA_swin/{cid}.nii.gz",
+        "Attention U-Net": ROOT / f"outputs/predictions/figA_attention/{cid}.nii.gz",
+        "Residual + concat": ROOT / f"outputs/predictions/final_concat_seed20260526_test/{cid}.nii.gz",
+    }
+    panels = [("Ground truth", reg_gt)]
+    for name, p in preds.items():
+        panels.append((name, pred_regions(np.asarray(nib.load(p).dataobj))))
+    fig, axs = plt.subplots(1, 4, figsize=(15, 4.3))
+    for ax, (title, reg) in zip(axs, panels):
+        overlay(ax, t1c[:, :, z], {k: v[:, :, z] for k, v in reg.items()}, title)
+    legend = [mpatches.Patch(color=COLORS[k][:3], label=k) for k in ("ET", "TC", "WT")]
+    fig.legend(handles=legend, loc="lower center", ncol=3, fontsize=10, frameon=False)
+    fig.suptitle(f"Comparación cualitativa de arquitecturas — caso {cid} (corte axial z={z})", fontsize=12)
+    fig.tight_layout(rect=[0, 0.06, 1, 0.95])
+    fig.savefig(OUT / "fig_comparacion_arquitecturas.png", dpi=150)
+    plt.close(fig)
+
+
 def main():
     picked = pick_case()
     if picked is None:
@@ -146,6 +170,9 @@ def main():
     fig.tight_layout(rect=[0, 0.06, 1, 0.96])
     fig.savefig(OUT / "fig_colapso_adaptive_gating.png", dpi=150)
     plt.close(fig)
+
+    if (ROOT / "outputs/predictions/figA_swin" / f"{cid}.nii.gz").exists():
+        comparison_architectures(cid, origin)
     print("figuras escritas en", OUT)
 
 
