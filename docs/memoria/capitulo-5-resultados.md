@@ -129,7 +129,39 @@ coste **real** —no reflejado en la tabla— es la pérdida de robustez documen
 de tener que descartar y repetir entrenamientos colapsados. Este es un argumento adicional, de
 eficiencia, en contra de adoptar la fusión adaptativa.
 
-## 5.5. Síntesis de resultados
+## 5.5. Resultados cualitativos
+
+Además de las métricas agregadas, resulta ilustrativo inspeccionar las segmentaciones. La Figura 1
+muestra, para un caso de test representativo (BraTS-GLI-02273-100), el corte axial con mayor
+extensión tumoral: la secuencia T1c de fondo, el *ground truth* y la predicción del modelo residual
+con concatenación. Las regiones se muestran anidadas (WT en amarillo, TC en naranja, ET en rojo). La
+predicción reproduce fielmente la extensión del tumor completo y del núcleo realzante, con
+diferencias menores en los bordes del edema.
+
+![Segmentación cualitativa: T1c, ground truth y predicción del modelo concat.](figuras/fig_segmentacion_cualitativa.png)
+
+**Figura 1.** Segmentación cualitativa sobre un caso de test (BraTS-GLI-02273-100, corte axial). De
+izquierda a derecha: secuencia T1c, *ground truth* y predicción del modelo residual con
+concatenación. Regiones anidadas ET ⊂ TC ⊂ WT.
+
+La Figura 2 ilustra visualmente el colapso de la fusión adaptativa descrito en §5.3. Sobre el mismo
+caso y corte, se comparan el *ground truth*, la predicción del modelo con concatenación (estable) y
+la de la compuerta adaptativa en una semilla colapsada. Mientras la concatenación delimita
+correctamente las tres regiones, la compuerta colapsada produce una **masa realzante amorfa** que
+sobreestima groseramente el ET e ignora la estructura anidada del tumor: una confirmación visual del
+fallo que las métricas de §5.3 cuantifican.
+
+![Colapso de la fusión adaptativa: ground truth, concat estable y compuerta colapsada.](figuras/fig_colapso_adaptive_gating.png)
+
+**Figura 2.** Ilustración del colapso de la fusión adaptativa (mismo caso y corte que la Figura 1).
+De izquierda a derecha: *ground truth*, predicción del modelo con concatenación (estable) y
+predicción de la compuerta adaptativa en una semilla colapsada.
+
+(Las figuras se han generado con las predicciones de la familia residual disponibles en local; la
+numeración de figuras es consecutiva global y se consolidará junto con los diagramas de los
+Capítulos 2 y 4 al integrar la memoria.)
+
+## 5.6. Síntesis de resultados
 
 Los resultados finales sobre test permiten responder a la pregunta de investigación con evidencia
 sólida (convergencia, conjunto reservado y multi-semilla):
