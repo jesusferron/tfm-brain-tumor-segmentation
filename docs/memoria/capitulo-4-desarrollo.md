@@ -112,6 +112,15 @@ evaluación métrica para recalcular métricas sin repetir la inferencia.
 | `predict` | Inferencia por ventana deslizante sobre un *split*; exporta predicciones NIfTI. |
 | `evaluate` | Calcula Dice y HD95 por región (ET/TC/WT) a partir de las predicciones. |
 
+La Figura 1 representa este flujo de extremo a extremo, desde el conjunto de datos hasta las
+métricas, y muestra cómo las configuraciones YAML parametrizan el entrenamiento y cómo el conjunto
+de test permanece reservado hasta la evaluación final.
+
+![Flujo del pipeline experimental.](figuras/fig_pipeline_flujo.png)
+
+**Figura 1.** Flujo del pipeline experimental: del conjunto de datos BraTS-GLI 2024 a las métricas
+por región, a través de control de calidad, particiones, entrenamiento, inferencia y evaluación.
+
 ### 4.3.3. Formulación del problema y regiones clínicas
 
 El modelo recibe un tensor con **cuatro canales** (modalidades T1n, T1c, T2w y FLAIR —denominada
@@ -199,7 +208,14 @@ class FusionUNet(nn.Module):
 ```
 
 El *baseline* emplea la fusión `concat`, equivalente a una identidad antes de la red (la U-Net
-concatena implícitamente los canales en su primera convolución). Se estudian tres alternativas:
+concatena implícitamente los canales en su primera convolución). La Figura 2 resume la arquitectura
+`FusionUNet` y el detalle interno de la compuerta adaptativa. Se estudian tres alternativas:
+
+![Arquitectura de fusión multimodal FusionUNet y detalle de la compuerta adaptativa.](figuras/fig_arquitectura_fusion.png)
+
+**Figura 2.** Arquitectura de fusión multimodal (`FusionUNet`): flujo entrada → bloque de fusión →
+Residual U-Net 3D → salida (arriba) y detalle de la compuerta adaptativa (abajo), con las tres
+variantes evaluadas.
 
 **Ponderación global estática (`global_weighted`).** Aprende un peso escalar por modalidad,
 **independiente de la entrada**, vía *softmax* sobre cuatro parámetros; reescala por el número de
