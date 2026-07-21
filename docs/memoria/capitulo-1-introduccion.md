@@ -1,12 +1,5 @@
 # 1. Introducción
 
-> Reescritura del Capítulo 1 a partir del borrador del documento de trabajo, pulida y alineada con
-> la estructura por fases (Capítulos 3–4) y con el desenlace del estudio (Capítulo 6). Se conserva
-> la argumentación y las citas del borrador; se neutraliza el marco para no presuponer el signo del
-> resultado, dado que la pregunta de investigación se responde de forma negativa.
-
-## 1.1. Contexto y motivación
-
 El diagnóstico apoyado en técnicas de imagen médica constituye uno de los pilares de la práctica
 clínica moderna. Modalidades como la radiografía, la tomografía computarizada, la resonancia
 magnética o la tomografía por emisión de positrones permiten examinar de forma no invasiva la
@@ -15,6 +8,8 @@ técnicas intervienen en la detección y caracterización de lesiones, la planif
 la evaluación de la respuesta al tratamiento y el seguimiento longitudinal. No obstante, sus
 resultados no deben interpretarse de forma aislada, sino integrarse con la información clínica,
 histopatológica y molecular del paciente.
+
+## 1.1. Contexto y motivación
 
 En particular, la imagen médica desempeña una función central en neuro-oncología, debido a la
 complejidad anatómica del sistema nervioso central, la heterogeneidad de los tumores cerebrales y la
@@ -98,14 +93,16 @@ et al., 2022).
 La problemática central de este TFM consiste, por tanto, en **determinar si una ponderación explícita
 y ligera de las modalidades aporta una mejora medible cuando se mantiene fija la arquitectura de
 segmentación**. Para aislar esta variable se utiliza la misma Residual U-Net 3D y el mismo protocolo
-de entrenamiento en tres configuraciones: concatenación directa, ponderación global estática y
-compuerta adaptativa. La ponderación global aprende un coeficiente por modalidad compartido por
-todas las entradas, mientras que la compuerta adaptativa genera los coeficientes a partir del
-contenido del volumen procesado; esos coeficientes se aplican antes del codificador y permanecen
-constantes dentro de cada volumen, por lo que el mecanismo es dependiente de la entrada pero no
-constituye una atención espacial ni específica por subregión. La inclusión de la ponderación global
-estática permite distinguir dos efectos posibles: si basta con aprender una jerarquía general entre
-modalidades, o si resulta beneficioso adaptar dicha ponderación al contenido de cada muestra.
+de entrenamiento en cuatro configuraciones: concatenación directa, ponderación global estática,
+compuerta adaptativa basada en la media y una extensión condicionada por la media y la desviación
+típica de cada modalidad. La ponderación global aprende un coeficiente por modalidad compartido por
+todas las entradas, mientras que las compuertas adaptativas generan los coeficientes a partir del
+tensor tridimensional procesado. Esos coeficientes se aplican antes del codificador y permanecen
+constantes en el espacio dentro de cada parche o ventana de inferencia; por tanto, el mecanismo es
+dependiente de la entrada, pero no constituye una atención espacial ni específica por subregión. La
+inclusión de la ponderación global permite distinguir dos efectos posibles: si basta con aprender
+una jerarquía general entre modalidades o si resulta beneficioso adaptar dicha ponderación al
+contenido de cada muestra.
 
 A partir de este planteamiento, la pregunta de investigación se formula así:
 
@@ -115,11 +112,11 @@ A partir de este planteamiento, la pregunta de investigación se formula así:
 > la arquitectura Residual U-Net 3D y un coste computacional asumible?
 
 La evaluación se realiza mediante el coeficiente Dice y la distancia de Hausdorff al percentil 95
-(HD95) para ET, TC y WT. El coste computacional se analiza considerando los parámetros adicionales,
-el uso de memoria y los tiempos de entrenamiento e inferencia bajo un mismo protocolo, un aspecto
-especialmente relevante en segmentación volumétrica, donde el incremento de complejidad de los
-mecanismos de atención puede traducirse en un consumo considerable de memoria y tiempo (Shaker et
-al., 2024).
+(HD95) para ET, TC y WT. La huella computacional se analiza mediante el número de parámetros y los
+registros disponibles de tiempo de entrenamiento y memoria, explicitando las diferencias entre
+entornos. Este aspecto resulta especialmente relevante en segmentación volumétrica, donde el
+incremento de complejidad de los mecanismos de atención puede traducirse en un consumo considerable
+de memoria y tiempo (Shaker et al., 2024).
 
 El alcance experimental se limita a las imágenes post-tratamiento de BraTS-GLI 2024 que contienen las
 cuatro modalidades requeridas. **El modelo no se ha entrenado ni validado para realizar cribado,
@@ -148,10 +145,12 @@ segmentación como el coste computacional.
 3. Diseñar e integrar, antes del codificador, una compuerta adaptativa ligera que estime un peso por
    modalidad en función del contenido de la entrada y lo aplique a los canales.
 4. Realizar un estudio de ablación controlado que compare concatenación directa, ponderación global
-   estática y ponderación adaptativa dependiente de la entrada, manteniendo constantes la
-   arquitectura base, las particiones y el protocolo de entrenamiento.
-5. Evaluar las variantes de fusión mediante Dice y HD95 para ET, TC y WT, y analizar su coste
-   computacional (parámetros, memoria y tiempos de entrenamiento e inferencia).
+   estática y dos variantes de ponderación adaptativa —basadas en la media y en
+   media+desviación—, manteniendo constantes la arquitectura base, las particiones y el protocolo de
+   entrenamiento.
+5. Evaluar las variantes de fusión mediante Dice y HD95 para ET, TC y WT, y analizar su huella
+   computacional a partir del número de parámetros y de los registros disponibles de tiempo y
+   memoria.
 6. Contextualizar los resultados comparándolos con arquitecturas de referencia de mayor complejidad
    (Attention U-Net y Swin-UNETR) y con el *baseline* externo nnU-Net.
 
@@ -180,4 +179,5 @@ la evaluación experimental de la solución.
 - **Capítulo 6, Conclusiones.** Sintetiza los hallazgos, responde a la pregunta de investigación,
   valora el cumplimiento de los objetivos y expone limitaciones y líneas de trabajo futuro.
 
-Tras estos capítulos se incluye la relación completa de referencias bibliográficas.
+Tras estos capítulos se incluyen la relación completa de referencias bibliográficas y un apéndice de
+reproducibilidad.

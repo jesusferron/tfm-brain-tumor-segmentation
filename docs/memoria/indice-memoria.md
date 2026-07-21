@@ -1,59 +1,58 @@
 # Índice de la memoria del TFM
 
-> Estructura aprobada por el tutor (respuesta CON-2026-05-28-M1, recibida 2026-06-25) y confirmada
-> por el documento oficial "Instrucciones de memoria de TFM" y por tres TFM de ejemplo del mismo
-> máster. Documento maestro que organiza el manuscrito en seis capítulos. El estado de cada
-> capítulo y su material de partida en el repositorio se indican en la tabla.
-> Convenciones de estilo, profundidad y extensión: [`guia-estilo-y-estructura.md`](guia-estilo-y-estructura.md).
-> Roadmap completo del proyecto en [`plan-tfm.md`](plan-tfm.md).
+> Estructura aprobada por el tutor (respuesta CON-2026-05-28-M1, recibida el 2026-06-25) y
+> contrastada con las instrucciones oficiales y los TFM de referencia. Última actualización:
+> 2026-07-21.
 
 Título de trabajo: **Segmentación de tumores cerebrales en resonancia magnética multimodal
 mediante arquitecturas Transformer-UNet híbridas**.
 
-## Estructura aprobada
+## Estructura del documento
 
-| # | Capítulo | Contenido | Estado | Material de partida |
+La memoria se organiza en seis capítulos, precedidos por el resumen y el *abstract*, y seguidos por
+las referencias bibliográficas y el apéndice de reproducibilidad.
+
+| Orden | Sección | Contenido | Estado | Fuente |
 | :-: | :-- | :-- | :-- | :-- |
-| 1 | **Introducción** | Contexto clínico y de IA, planteamiento del problema, pregunta de investigación, objetivos y organización del documento | ✅ Redactado (reescrito desde el borrador) | [`capitulo-1-introduccion.md`](capitulo-1-introduccion.md) |
-| 2 | **Marco teórico y estado del arte** | Segmentación médica 3D; U-Net y variantes; atención; Transformers (Swin-UNETR); nnU-Net; fusión multimodal (Tabla 1); reto BraTS y métricas Dice/HD95 | ✅ Redactado (reescrito y ampliado) | [`capitulo-2-marco-teorico.md`](capitulo-2-marco-teorico.md) |
-| 3 | **Metodología** | Metodología *ad hoc* de 5 fases descritas de forma general + cronograma. **Sin detalle técnico** | ✅ Reorganizado por fases | [`capitulo-3-metodologia.md`](capitulo-3-metodologia.md) |
-| 4 | **Desarrollo** | Detalle técnico por fase (una sección por fase, en correspondencia con Metodología): entorno, datos/QC/splits, ETL, factory de modelos, fusión, hiperparámetros, inferencia, métricas | ✅ Reorganizado por fases | [`capitulo-4-desarrollo.md`](capitulo-4-desarrollo.md) |
-| 5 | **Resultados** | Comparativa de arquitecturas (Dice/HD95 por ET/TC/WT); estudio de ablación de fusión; coste computacional — todo sobre **test** (3 semillas) | ✅ Redactado con resultados finales | [`capitulo-5-resultados.md`](capitulo-5-resultados.md), `outputs/evaluation/final_all_test.csv` |
-| 6 | **Conclusiones** | Respuesta a la pregunta de investigación (negativo defendible), grado de cumplimiento de objetivos, contribución como estudio crítico de fusión, limitaciones y trabajo futuro | ✅ Redactado | [`capitulo-6-conclusiones.md`](capitulo-6-conclusiones.md) |
+| — | **Resumen y Abstract** | Síntesis, palabras clave y principales resultados en español e inglés | ✅ Redactado | [`resumen-abstract.md`](resumen-abstract.md) |
+| 1 | **Introducción** | Contexto clínico y de IA, problema, pregunta de investigación, objetivos y organización | ✅ Texto revisado | [`capitulo-1-introduccion.md`](capitulo-1-introduccion.md) |
+| 2 | **Marco teórico y estado del arte** | Segmentación 3D, U-Net, atención, Transformers, nnU-Net, fusión multimodal, BraTS y métricas | ✅ Texto revisado | [`capitulo-2-marco-teorico.md`](capitulo-2-marco-teorico.md) |
+| 3 | **Metodología** | Metodología *ad hoc* de cinco fases y cronograma, sin duplicar el detalle técnico | ✅ Reorganizado y redactado | [`capitulo-3-metodologia.md`](capitulo-3-metodologia.md) |
+| 4 | **Desarrollo** | Implementación por fases: datos, entorno, MONAI, modelos, fusión, entrenamiento, inferencia y métricas | ✅ Reorganizado y redactado | [`capitulo-4-desarrollo.md`](capitulo-4-desarrollo.md) |
+| 5 | **Resultados** | Ablación de fusión, comparación descriptiva de arquitecturas, HD95, coste y análisis cualitativo | ✅ Resultados finales incorporados | [`capitulo-5-resultados.md`](capitulo-5-resultados.md), `outputs/evaluation/final_all_test.csv` |
+| 6 | **Conclusiones** | Respuesta acotada, cumplimiento de objetivos, contribución, limitaciones y trabajo futuro | ✅ Redactado con alcance prudente | [`capitulo-6-conclusiones.md`](capitulo-6-conclusiones.md) |
+| — | **Referencias bibliográficas** | Bibliografía completa en formato autor-año | ✅ Revisadas; 34 fuentes | [`capitulo-7-referencias.md`](capitulo-7-referencias.md) |
+| — | **Apéndice A. Reproducibilidad** | Repositorio, commit, comandos, artefactos, condiciones de acceso y límites | ✅ Redactado; pendiente fijar commit final | [`apendice-reproducibilidad.md`](apendice-reproducibilidad.md) |
 
-Material transversal: aspectos legales/licencia (CC-BY-NC 4.0, cita BraTS), tablas del dataset y
-estructura del repositorio (ya redactados en [`README.md`](README.md), a reubicar en los
-capítulos correspondientes).
+Convenciones de estilo, extensión y maquetación:
+[`guia-estilo-y-estructura.md`](guia-estilo-y-estructura.md). Estado de cierre y tareas pendientes:
+[`plan-tfm.md`](plan-tfm.md).
 
-## Decisión de reparto Metodología (cap. 3) ↔ Desarrollo (cap. 4)
+## Metodología y desarrollo
 
-El tutor indicó que la **Metodología describe las fases de alto nivel** y que **el detalle técnico,
-las decisiones y las configuraciones van al Desarrollo**. El capítulo 3 actual contiene mucho
-detalle técnico (transforms concretas, hiperparámetros, inferencia por ventana deslizante) que,
-según ese criterio, corresponde al capítulo 4.
+La separación acordada con el tutor ya está aplicada:
 
-**Corroborado por los TFM de ejemplo:** en los tres, la Metodología ocupa solo 2-3 páginas y
-describe el *proceso/fases* (metodología ágil, cronograma), nunca las técnicas; todo el detalle
-técnico vive en Desarrollo. Refuerza la necesidad de re-nivelar el capítulo 3. Detalle en la
-[guía de estilo](guia-estilo-y-estructura.md).
+- el Capítulo 3 describe las cinco fases y el cronograma a alto nivel;
+- el Capítulo 4 desarrolla las decisiones, configuraciones e implementación de cada fase;
+- los detalles técnicos no se duplican de forma sistemática entre ambos capítulos.
 
-- **Reparto validado por el tutor (2026-07-13):** se re-nivela el capítulo 3 a fases de alto nivel
-  y el detalle técnico se traslada al capítulo 4, evitando duplicación. Ya se puede acometer la
-  reestructuración sin esperar más confirmación.
-- **Acción pendiente:** ejecutar esa re-nivelación en `capitulo-3-metodologia.md` y
-  `capitulo-4-desarrollo.md`.
+El material transversal solicitado también está integrado: la tabla comparativa de herramientas se
+encuentra en el Capítulo 2; los datos, modalidades y flujo experimental en el Capítulo 4; las
+comparaciones cuantitativas y cualitativas en el Capítulo 5; y las condiciones de reproducción y de
+acceso a los datos en el Apéndice A.
 
-## Decisiones de la reunión con el tutor (2026-07-13)
+## Estado de figuras y tablas
 
-Reunión celebrada; cerradas las decisiones que condicionaban la redacción (detalle en
-[`reunion-tutor-2026-06-29.md`](../pre-design/reunion-tutor-2026-06-29.md)):
+- Tablas del texto principal numeradas consecutivamente de la Tabla 1 a la Tabla 15, más la Tabla
+  A.1 del apéndice.
+- Figuras utilizadas numeradas de la Figura 1 a la Figura 4.
+- La Figura 1 presenta la visión global del sistema y separa la ruta MONAI del *pipeline* propio de
+  nnU-Net.
+- Las Figuras 3 y 4 utilizan terminología coherente con el análisis descriptivo de las corridas.
 
-1. **Reparto Metodología/Desarrollo:** validado (cap. 3 fases de alto nivel; detalle al cap. 4).
-2. **Nivel de detalle:** confirmado (justificación clínica/técnica + diagramas de flujo y
-   arquitectura; pseudocódigo solo cuando aporte).
-3. **Referencias / TFM modelo:** ya resuelto con los ejemplos de Drive y la guía de estilo.
-4. **Tabla comparativa de repositorios:** una sola tabla; columnas mínimas a criterio propio (sin
-   ejemplo adicional del tutor).
-5. **Tipos de imagen:** basta una tabla modalidad→tejido/lesión y relevancia para ET/TC/WT;
-   ejemplos visuales sí, con propósito ilustrativo y analítico; exclusión de BraTS-MEN-RT justificada
-   en el capítulo de tipos de imagen/dataset.
+## Integración y entrega final
+
+Los contenidos Markdown ya están integrados en un borrador reproducible basado en la plantilla
+oficial. Antes de la entrega todavía deben completarse los datos formales de portada, actualizarse
+en Word el índice general, el índice de figuras y el índice de tablas, fijarse la referencia de
+versión del apéndice y exportarse el PDF definitivo.

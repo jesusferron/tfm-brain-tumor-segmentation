@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
-"""Generate qualitative figures for Chapter 5 from local test predictions.
+"""Generate qualitative figures for Chapter 5 from local evaluation predictions.
 
-Two figures:
-  1. Qualitative segmentation of a representative test case: T1c background,
-     ground truth vs. the concat baseline prediction (ET/TC/WT overlays).
-  2. Visual illustration of the adaptive-gating collapse: same case, concat
-     (stable) vs. adaptive_gating seed-28 (collapsed) prediction.
+Two figures used in Chapter 5 are generated when all copied prediction artefacts
+are available:
+  1. A comparison of the manual reference, nnU-Net, Swin-UNETR, Attention U-Net,
+     and the concatenation baseline.
+  2. A visual illustration of an adaptive-gating low-performance run.
 
-Only the local fusion-ablation predictions are used (Swin/nnU-Net predictions
-live on the cloud runtime). Backgrounds and ground truth come from the dataset.
+The script reads predictions available below ``outputs/predictions``. Backgrounds
+and manual references come from the configured dataset.
 """
 from __future__ import annotations
 
@@ -29,7 +29,7 @@ import numpy as np
 from tfm_brats.brats import DatasetSpec, build_case_paths
 from tfm_brats.config import load_config
 
-ROOT = Path("/Users/jesusferron-personal/Repository/tfm-brain-tumor-segmentation")
+ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "docs/memoria/figuras"
 OUT.mkdir(parents=True, exist_ok=True)
 SPEC = DatasetSpec.from_config(load_config(ROOT / "configs/dataset/brats_gli_2024.yaml"))
@@ -108,11 +108,11 @@ def norm_bg(v):
 
 
 def comparison_architectures(cid, origin):
-    """4-panel qualitative comparison: ground truth vs Swin, Attention, concat."""
+    """Compare the manual reference with the available architecture outputs."""
     t1c, gt = load_case(cid, origin)
     reg_gt = gt_regions(gt)
     z = int(np.argmax(reg_gt["WT"].sum(axis=(0, 1))))
-    panels = [("Ground truth", reg_gt)]
+    panels = [("Referencia manual", reg_gt)]
     # nnU-Net output uses raw BraTS labels (0-4) -> gt_regions convention.
     nnunet = ROOT / f"outputs/predictions/figA_nnunet/{cid}.nii.gz"
     if nnunet.exists():
@@ -121,7 +121,7 @@ def comparison_architectures(cid, origin):
     preds = {
         "Swin-UNETR": ROOT / f"outputs/predictions/figA_swin/{cid}.nii.gz",
         "Attention U-Net": ROOT / f"outputs/predictions/figA_attention/{cid}.nii.gz",
-        "Residual + concat": ROOT / f"outputs/predictions/final_concat_seed20260526_test/{cid}.nii.gz",
+        "Residual + concatenación": ROOT / f"outputs/predictions/final_concat_seed20260526_test/{cid}.nii.gz",
     }
     for name, p in preds.items():
         panels.append((name, pred_regions(np.asarray(nib.load(p).dataobj))))
@@ -154,24 +154,22 @@ def main():
 
     legend = [mpatches.Patch(color=COLORS[k][:3], label=k) for k in ("ET", "TC", "WT")]
 
-    # Figura 1: T1c | ground truth | predicción (concat)
+    # Figure used in Chapter 5: one low-performance adaptive-gating run.
     fig, axs = plt.subplots(1, 3, figsize=(12, 4.5))
-    axs[0].imshow(np.rot90(bg), cmap="gray"); axs[0].set_title("T1c (contraste)", fontsize=11); axs[0].axis("off")
-    overlay(axs[1], t1c[:, :, z], sl(reg_gt), "Ground truth")
-    overlay(axs[2], t1c[:, :, z], sl(reg_concat), "Predicción (concat)")
+    overlay(axs[0], t1c[:, :, z], sl(reg_gt), "Referencia manual")
+    overlay(axs[1], t1c[:, :, z], sl(reg_concat), "Concatenación (semilla 20260526)")
+    overlay(
+        axs[2],
+        t1c[:, :, z],
+        sl(reg_adap),
+        "Compuerta adaptativa\n(corrida de bajo rendimiento)",
+    )
     fig.legend(handles=legend, loc="lower center", ncol=3, fontsize=10, frameon=False)
-    fig.suptitle(f"Segmentación cualitativa — caso {cid} (corte axial z={z})", fontsize=12)
-    fig.tight_layout(rect=[0, 0.06, 1, 0.96])
-    fig.savefig(OUT / "fig_segmentacion_cualitativa.png", dpi=150)
-    plt.close(fig)
-
-    # Figura 2: colapso — ground truth | concat (estable) | adaptive_gating (colapsado)
-    fig, axs = plt.subplots(1, 3, figsize=(12, 4.5))
-    overlay(axs[0], t1c[:, :, z], sl(reg_gt), "Ground truth")
-    overlay(axs[1], t1c[:, :, z], sl(reg_concat), "concat (estable)")
-    overlay(axs[2], t1c[:, :, z], sl(reg_adap), "adaptive_gating (semilla colapsada)")
-    fig.legend(handles=legend, loc="lower center", ncol=3, fontsize=10, frameon=False)
-    fig.suptitle(f"Colapso de la fusión adaptativa — caso {cid} (corte axial z={z})", fontsize=12)
+    fig.suptitle(
+        f"Corrida de bajo rendimiento de la fusión adaptativa — caso {cid} "
+        f"(corte axial z={z})",
+        fontsize=12,
+    )
     fig.tight_layout(rect=[0, 0.06, 1, 0.96])
     fig.savefig(OUT / "fig_colapso_adaptive_gating.png", dpi=150)
     plt.close(fig)

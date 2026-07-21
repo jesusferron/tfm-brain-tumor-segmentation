@@ -1,0 +1,5 @@
+model,n_seeds,mean_dice_mean,mean_dice_std,ET_dice_mean,ET_dice_std,TC_dice_mean,TC_dice_std,WT_dice_mean,WT_dice_std
+concat,3,0.7059,0.0055,0.5479,0.0087,0.7291,0.0097,0.8408,0.0037
+global_weighted,3,0.7057,0.0065,0.5497,0.0128,0.727,0.0089,0.8404,0.0042
+adaptive_gating,3,0.5862,0.169,0.4037,0.1995,0.5852,0.2055,0.7698,0.1021
+adaptive_gating_meanstd,3,0.5916,0.1714,0.419,0.2107,0.5906,0.2087,0.7651,0.0948

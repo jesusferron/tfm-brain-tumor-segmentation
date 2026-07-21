@@ -1,6 +1,54 @@
 # tfm-brain-tumor-segmentation
 
-Repositorio de protocolo experimental para segmentación BraTS-GLI 2024.
+Repositorio del Trabajo de Fin de Máster sobre segmentación tridimensional de gliomas en MRI
+multimodal con BraTS-GLI 2024. El estudio compara estrategias ligeras de fusión de las modalidades
+T1n, T1c, T2w y FLAIR sobre una Residual U-Net 3D y contextualiza sus resultados mediante
+Attention U-Net, Swin-UNETR y nnU-Net.
+
+## Estado del proyecto
+
+La fase experimental está cerrada. Las configuraciones basadas en MONAI se entrenaron con tres
+semillas y 15.000 pasos; nnU-Net se utilizó como referencia externa mediante una corrida del
+*fold* 0. Los resultados finales se encuentran en
+[`outputs/evaluation/final_all_test.csv`](outputs/evaluation/final_all_test.csv).
+
+| Configuración | n | Dice medio |
+| :-- | :-: | :-: |
+| nnU-Net `3d_fullres`, *fold* 0 | 1 | 0,829 |
+| Swin-UNETR | 3 | 0,752 ± 0,017 |
+| Attention U-Net 3D | 3 | 0,735 ± 0,006 |
+| Residual U-Net + concatenación | 3 | 0,706 ± 0,005 |
+| Residual U-Net + ponderación global | 3 | 0,706 ± 0,006 |
+| Residual U-Net + compuerta adaptativa | 3 | 0,586 ± 0,169 |
+| Residual U-Net + compuerta media+desviación | 3 | 0,592 ± 0,171 |
+
+La ablación no encontró una mejora consistente de las ponderaciones explícitas frente a la
+concatenación. Las variantes adaptativas presentaron una corrida de bajo rendimiento entre las tres
+ejecutadas y una variabilidad entre semillas mayor. Esta conclusión se limita a los mecanismos, el
+presupuesto y la partición empleados; no se extrapola a otras formas de fusión adaptativa.
+
+La partición es disjunta por identificador completo de estudio, pero no está agrupada por sujeto.
+Por tanto, permite una comparación interna de las estrategias de fusión bajo una partición común,
+pero no constituye una evaluación independiente de generalización a pacientes nuevos.
+
+## Memoria y trazabilidad
+
+- Los seis capítulos y las referencias están en [`docs/memoria/`](docs/memoria/).
+- La bitácora cronológica de decisiones y experimentos está en
+  [`docs/vitacora/README.md`](docs/vitacora/README.md).
+- Las configuraciones de los experimentos están en [`configs/`](configs/).
+- Los datos originales, predicciones volumétricas y *checkpoints* no se distribuyen en el
+  repositorio.
+
+## Entorno y pruebas
+
+Las dependencias del protocolo MONAI se enumeran en
+[`requirements/protocol.txt`](requirements/protocol.txt). Las pruebas unitarias pueden ejecutarse
+con:
+
+```bash
+python -m unittest discover -s tests -v
+```
 
 ## Comandos principales
 

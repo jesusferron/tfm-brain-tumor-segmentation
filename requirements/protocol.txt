@@ -1,4 +1,4 @@
-# Dependencies for QC, split generation, MONAI smoke training and evaluation.
+# Dependencies for QC, split generation, MONAI training/evaluation and thesis figures.
 
 numpy
 scipy
@@ -6,3 +6,4 @@ nibabel
 PyYAML
 torch
 monai
+matplotlib
