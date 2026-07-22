@@ -1,69 +1,62 @@
 # Resumen
 
-La segmentación automática de gliomas en resonancia magnética multimodal puede facilitar la
-cuantificación de las regiones tumorales, pero exige integrar información complementaria de las
-secuencias T1 nativa, T1 con contraste, T2 y FLAIR. Este Trabajo de Fin de Máster estudia si una
-ponderación explícita, adaptativa y ligera de estas modalidades mejora la segmentación 3D frente a
-su concatenación directa. Para ello se construyó un *pipeline* reproducible basado en MONAI y
-PyTorch sobre BraTS-GLI 2024, con control de calidad, particiones versionadas, entrenamiento por
-parches, inferencia por ventana deslizante y evaluación mediante Dice y HD95 para el tumor
-realzante (ET), el núcleo tumoral (TC) y el tumor completo (WT).
+La resonancia magnética permite observar los gliomas y medir su extensión. Para ello deben
+delimitarse las distintas zonas del tumor en imágenes tridimensionales, una tarea manual lenta y que
+requiere experiencia. Ningún tipo de imagen muestra por sí solo toda la lesión, por lo que suelen
+combinarse cuatro secuencias complementarias: T1, T1 con contraste, T2 y FLAIR. Este Trabajo de Fin
+de Máster estudia si ajustar automáticamente la importancia de cada secuencia mejora la segmentación
+frente a combinarlas directamente.
 
-La comparación principal mantuvo fija una Residual U-Net 3D y evaluó, con tres semillas y un
-presupuesto común de 15.000 pasos, la concatenación, una ponderación global estática y dos
-compuertas adaptativas. La concatenación alcanzó un Dice medio de 0,706 ± 0,005 y la ponderación
-global 0,706 ± 0,006. Las variantes adaptativas obtuvieron 0,586 ± 0,169 y 0,592 ± 0,171,
-respectivamente; en cada una apareció una corrida de bajo rendimiento entre las tres repeticiones.
-Por tanto, en las condiciones evaluadas no se obtuvo evidencia de que las compuertas propuestas
-mejoren de forma consistente la concatenación. El análisis de sus pesos mostró además muy poca
-variación entre estudios, resultado compatible con una señal de condicionamiento limitada, aunque
-no permite establecer la causa del rendimiento observado.
+Con datos de BraTS-GLI 2024 se desarrolló un sistema experimental reproducible. Se compararon cuatro
+formas de combinar las imágenes manteniendo la misma red 3D, los mismos datos y el mismo
+entrenamiento: combinación directa, ponderación fija y dos métodos adaptativos. Cada opción se
+ejecutó tres veces. El rendimiento se midió principalmente con Dice, una puntuación entre 0 y 1 que
+indica cuánto coincide el resultado automático con la segmentación de referencia; cuanto mayor es
+el valor, mejor es la coincidencia.
 
-Como contextualización arquitectónica, Swin-UNETR obtuvo 0,752 ± 0,017 y Attention U-Net
-0,735 ± 0,006. Una única corrida de nnU-Net `3d_fullres`, empleada como referencia externa, alcanzó
-0,829. Estas cifras se interpretan descriptivamente porque nnU-Net utiliza un protocolo propio y
-porque no todas las familias comparten exactamente el entorno y la inferencia. La partición de
-evaluación se generó por estudio, no por sujeto, por lo que existe solapamiento longitudinal de
-sujetos entre particiones y los resultados no representan una estimación independiente de
-generalización a pacientes nuevos. Esto no invalida la comparación interna bajo el reparto común,
-pero limita la interpretación clínica de sus valores. La conclusión se restringe a los mecanismos
-de fusión temprana y al protocolo analizado: la concatenación fue la alternativa más parsimoniosa y
-una de las de menor variabilidad, sin que ello implique que otras formulaciones de fusión adaptativa
-sean ineficaces.
+La combinación directa y la ponderación fija obtuvieron un Dice medio de 0,706. Los métodos
+adaptativos quedaron alrededor de 0,59 y fueron más variables, con una ejecución de bajo
+rendimiento en cada caso. Sus pesos apenas cambiaron entre estudios, por lo que no adaptaron de
+forma efectiva la combinación a cada entrada ni ofrecieron una mejora consistente. Otros modelos,
+incluido uno basado en Transformers, se evaluaron únicamente como referencia para situar este
+resultado en un contexto más amplio.
+
+Los datos se separaron por estudio de imagen y no por paciente, de modo que exploraciones de una
+misma persona pueden aparecer en conjuntos diferentes. El reparto permite comparar las estrategias
+entre sí, pero no medir de forma independiente el rendimiento en pacientes nuevos ni demostrar
+utilidad clínica. En las condiciones analizadas, la combinación directa fue la opción más sencilla
+y una de las más estables. Esta conclusión se limita a los métodos estudiados y no descarta otros
+diseños adaptativos.
 
 **Palabras clave:** segmentación de gliomas; resonancia magnética multimodal; BraTS-GLI 2024;
 aprendizaje profundo; fusión adaptativa; MONAI; segmentación 3D.
 
 # Abstract
 
-Automatic glioma segmentation from multimodal magnetic resonance imaging may support quantitative
-assessment of tumour regions, but it requires integrating complementary information from native T1,
-contrast-enhanced T1, T2, and FLAIR sequences. This Master's Thesis investigates whether an
-explicit, lightweight, input-conditioned weighting of these modalities improves 3D segmentation
-over direct channel concatenation. A reproducible MONAI- and PyTorch-based pipeline was developed
-for BraTS-GLI 2024, covering quality control, versioned data partitions, patch-based training,
-sliding-window inference, and evaluation with Dice and HD95 for enhancing tumour (ET), tumour core
-(TC), and whole tumour (WT).
+Magnetic resonance imaging makes it possible to observe gliomas and assess their extent. This
+requires delineating different tumour regions in three-dimensional images, a slow manual task that
+demands expertise. No single type of image shows the entire lesion, so four complementary MRI
+sequences are commonly combined: T1, contrast-enhanced T1, T2, and FLAIR. This Master's Thesis
+examines whether automatically adjusting the importance of each sequence improves segmentation
+compared with combining them directly.
 
-The main comparison kept a 3D Residual U-Net fixed and evaluated direct concatenation, static global
-weighting, and two adaptive gates using three seeds and a common budget of 15,000 training steps.
-Concatenation achieved a mean Dice of 0.706 ± 0.005, while static global weighting achieved
-0.706 ± 0.006. The two adaptive variants reached 0.586 ± 0.169 and 0.592 ± 0.171, respectively;
-each exhibited one low-performance run among the three repetitions. Under the evaluated conditions,
-the experiments therefore provided no evidence that the proposed gates consistently improve upon
-concatenation. Their learned weights also varied very little across studies, which is compatible
-with a limited conditioning signal but does not establish the cause of the observed performance.
+A reproducible experimental system was developed using BraTS-GLI 2024 data. Four ways of combining
+the images were compared while keeping the same 3D network, data, and training: direct combination,
+fixed weighting, and two adaptive methods. Each option was run three times. Performance was measured
+mainly with Dice, a score between 0 and 1 that indicates how closely the automatic result matches
+the reference segmentation; a higher value means greater agreement.
 
-For architectural context, Swin-UNETR achieved 0.752 ± 0.017 and Attention U-Net 0.735 ± 0.006. A
-single nnU-Net `3d_fullres` run, used as an external reference, achieved 0.829. These results are
-interpreted descriptively because nnU-Net follows its own pipeline and the model families do not all
-share exactly the same execution and inference settings. The evaluation partition was created at
-the study level rather than the subject level; longitudinal subject overlap therefore exists across
-partitions, and the reported values are not an independent estimate of generalisation to unseen
-patients. This does not invalidate the internal comparison under the common split, but it limits the
-clinical interpretation of those values. The conclusion is restricted to the early-fusion
-mechanisms and protocol examined here: concatenation was the most parsimonious option and one of the
-least variable, without implying that other adaptive-fusion formulations are ineffective.
+Direct combination and fixed weighting both achieved a mean Dice score of 0.706. The adaptive
+methods scored around 0.59 and were more variable, with one low-performing run in each case. Their
+weights changed very little across studies, so they did not effectively adapt the combination to
+each input or provide a consistent improvement. Other models, including a Transformer-based model,
+were evaluated only as references to place this result in a broader context.
+
+The data were split by imaging study rather than by patient, so scans from the same person may
+appear in different sets. This supports a comparison between the strategies, but it does not
+independently measure performance on new patients or demonstrate clinical usefulness. Under the
+evaluated conditions, direct combination was the simplest option and one of the most stable. This
+conclusion is limited to the methods studied and does not rule out other adaptive designs.
 
 **Keywords:** glioma segmentation; multimodal magnetic resonance imaging; BraTS-GLI 2024; deep
 learning; adaptive fusion; MONAI; 3D segmentation.

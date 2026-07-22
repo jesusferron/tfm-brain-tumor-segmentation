@@ -25,6 +25,15 @@ motivó esta selección se presenta en el Capítulo 2.
 
 ## 4.2. Análisis y preparación de los datos (Fase 2)
 
+Esta fase transforma la colección original en una base experimental verificable antes de iniciar
+los entrenamientos. El proceso reúne tres tareas encadenadas: descubrir los estudios y sus
+modalidades a partir de una configuración común, comprobar la integridad y coherencia de los
+volúmenes y las etiquetas, y generar particiones reproducibles para entrenamiento, validación y
+test. Estas operaciones aseguran que todas las configuraciones se comparen sobre los mismos datos y
+dejan trazabilidad sobre los casos incluidos, los criterios de estratificación y la semilla
+utilizada. También permiten hacer explícita la unidad de separación adoptada —el estudio de imagen,
+no el sujeto— y las limitaciones que esta decisión introduce en la interpretación posterior.
+
 ### 4.2.1. Conjunto de datos y descubrimiento de estudios
 
 El alcance experimental se limita a **BraTS-GLI 2024 post-tratamiento**, sin mezclar tareas de otras
@@ -60,8 +69,8 @@ presenta el tamaño y el uso de cada partición.
 | Validación | 243 | 15 % | Monitorización y selección de puntos de control en la *pipeline* MONAI |
 | Test | 243 | 15 % | Evaluación final después de congelar las configuraciones |
 
-La tabla muestra que validación y test tienen el mismo tamaño, pero desempeñan funciones distintas:
-el test no intervino en la selección de `best.pt`. La separación se realizó por identificador
+La tabla muestra que validación y test tienen el mismo tamaño, pero desempeñan funciones distintas.
+El test no intervino en la selección de `best.pt`. La separación se realizó por identificador
 completo de **estudio de imagen**, no mediante agrupación por sujeto. En consecuencia, no existen
 estudios repetidos entre particiones, pero 205 de los 243 estudios de test pertenecen a sujetos con
 otro estudio en entrenamiento o validación. Los 38 estudios restantes corresponden a 29 sujetos no
@@ -70,6 +79,16 @@ común, pero impide interpretar el test como una estimación independiente de ge
 pacientes completamente nuevos.
 
 ## 4.3. Diseño e implementación del *pipeline* (Fase 3)
+
+Esta fase convierte los requisitos definidos en la metodología en un *pipeline* ejecutable y
+reproducible. Las subsecciones avanzan desde la infraestructura hasta los componentes del modelo.
+Primero se describen los entornos de cómputo, la organización del código y el flujo de trabajo.
+Después se formalizan las entradas y salidas y se detallan el preprocesamiento y el aumento de
+datos. Por último, se presentan la *factory* de modelos y los mecanismos de fusión. Esta secuencia
+permite distinguir la infraestructura compartida por los experimentos MONAI de la ruta externa de
+nnU-Net, y reserva para la Fase 4 las decisiones de entrenamiento y ejecución. El resultado es la
+base técnica común sobre la que se realizan las comparaciones y se aísla la estrategia de fusión
+como variable principal de la ablación.
 
 ### 4.3.1. Entornos de cómputo
 
@@ -105,7 +124,7 @@ dispositivo y, en el perfil local, el límite efectivo de 15.000 pasos. Por tant
 reproducible completa es la combinación de YAML y comando de ejecución, conservada en
 `scratchpad/run_final_fusion_ablation.sh` para la ablación local y en
 `notebooks/colab_final_a100.ipynb` para Attention U-Net y Swin-UNETR. nnU-Net utiliza scripts y
-comandos nativos independientes, descritos en §4.4.5.
+comandos nativos independientes, descritos en la sección 4.4.5.
 
 La CLI propia expone cinco subcomandos. La Tabla 8 resume su responsabilidad y deja explícita la
 separación entre generar predicciones y evaluarlas.
@@ -120,8 +139,8 @@ separación entre generar predicciones y evaluarlas.
 | `predict` | Carga un modelo y exporta predicciones NIfTI para una partición. |
 | `evaluate` | Lee predicciones ya generadas y calcula Dice y HD95 para ET, TC y WT. |
 
-La tabla refleja un flujo desacoplado: las métricas pueden recalcularse a partir de los NIfTI sin
-repetir la inferencia. La Figura 1 ofrece una visión global del sistema, incluidas las ramas que no
+La tabla refleja un flujo desacoplado, dado que las métricas pueden recalcularse a partir de los NIfTI
+sin repetir la inferencia. La Figura 1 ofrece una visión global del sistema, incluidas las ramas que no
 comparten el mismo bucle de entrenamiento.
 
 ![Flujo global del sistema experimental.](figuras/fig_pipeline_flujo.png)
@@ -153,7 +172,7 @@ la información que aportan y las salidas con las etiquetas BraTS utilizadas por
 | Salida | TC, canal 1 | Etiquetas {1, 3, 4} | Núcleo tumoral completo |
 | Salida | WT, canal 2 | Etiquetas {1, 2, 3, 4} | Extensión tumoral completa |
 
-La tabla muestra por qué la entrada es multimodal: ninguna secuencia resume por sí sola toda la
+La tabla muestra por qué la entrada es multimodal. Ninguna secuencia resume por sí sola toda la
 información usada para construir ET, TC y WT. Los ejemplos del Capítulo 5 complementan esta
 descripción al mostrar simultáneamente las regiones predichas sobre un estudio concreto.
 
@@ -168,7 +187,7 @@ WT, y reconstruye un mapa NIfTI compatible con la evaluación.
 La *pipeline* MONAI usa `LoadImaged`, `EnsureChannelFirstd`, normalización por modalidad sobre
 vóxeles no nulos (`NormalizeIntensityd(nonzero=True, channel_wise=True)`) y conversión a tensores.
 Durante entrenamiento y validación interna también carga la etiqueta y aplica `BratsRegionsd`. La
-inferencia de test usa `build_inference_transforms`, que procesa únicamente la imagen; la máscara se
+inferencia de test usa `build_inference_transforms`, que procesa únicamente la imagen. La máscara se
 carga después desde `metrics.py` para evaluar la predicción exportada.
 
 El aumento se limita al entrenamiento. `SpatialPadd` asegura un tamaño mínimo de 128³,
@@ -204,14 +223,15 @@ fusión evaluadas.
 | nnU-Net `3d_fullres` | nnU-Net v2, externo | Arquitectura y preprocesamiento auto-configurados | Auto-configurado |
 
 La tabla evidencia dos escalas distintas. Las cuatro configuraciones residuales mantienen fija una
-red de aproximadamente 1,19 millones de parámetros y solo cambian el bloque de entrada; Attention
-U-Net y, especialmente, Swin-UNETR aumentan la capacidad. nnU-Net se incluye como familia de
-referencia, no como una configuración construida por la *factory* ni como parte de la ablación.
+red de aproximadamente 1,19 millones de parámetros y solo cambian el bloque de entrada. Por otro
+lado, Attention U-Net y, especialmente, Swin-UNETR aumentan la capacidad. nnU-Net se incluye como
+familia de referencia, no como una configuración construida por la *factory* ni como parte de la
+ablación.
 
 La generalización de `build_model` para despachar entre Residual U-Net, Attention U-Net y
 Swin-UNETR fue una de las adaptaciones realizadas durante el proyecto. Swin-UNETR admite además
-`use_checkpoint`; esta opción se probó para el entorno L4, aunque las corridas finales A100 usaron
-la configuración sin *gradient checkpointing*.
+`use_checkpoint`. Esta opción se probó para el entorno L4, aunque las corridas finales A100 usaron la
+configuración sin *gradient checkpointing*.
 
 ### 4.3.6. Mecanismos de fusión multimodal
 
@@ -239,11 +259,11 @@ como los descriptores usados por las compuertas.
 codificador, Residual U-Net común y tres canales de salida. El detalle de la compuerta muestra la
 obtención de pesos globales por modalidad a partir de descriptores de la entrada.
 
-La figura subraya que la adaptación no es espacial ni se introduce en capas intermedias: produce un
-peso por modalidad y muestra, y actúa antes de la primera convolución.
+La figura subraya que la adaptación no es espacial ni se introduce en capas intermedias. El mecanismo
+produce un peso por modalidad para cada muestra y actúa antes de la primera convolución.
 
 **Concatenación (`concat`).** Se implementa como `nn.Identity()`. No introduce una ponderación
-explícita: los cuatro canales llegan directamente a la primera convolución de la U-Net.
+explícita. Los cuatro canales llegan directamente a la primera convolución de la U-Net.
 
 **Ponderación global (`global_weighted`).** Aprende cuatro *logits* independientes de la entrada.
 Tras aplicar *softmax*, cada canal se multiplica por su peso y por cuatro para preservar la escala
@@ -269,12 +289,22 @@ fuera el descriptor y el mecanismo de fusión.
 
 ## 4.4. Experimentación (Fase 4)
 
+Esta fase traslada el *pipeline* implementado a un conjunto de ejecuciones diseñado para responder
+a la pregunta de investigación. La sección describe primero la configuración común de los modelos
+MONAI y el procedimiento de entrenamiento y selección de puntos de control. Después establece los
+criterios de comparación y reproducibilidad y concreta la ablación de fusión. Por último, documenta
+la ruta independiente de nnU-Net. Esta organización permite distinguir tres niveles de evidencia:
+la comparación controlada de las estrategias de fusión sobre la misma Residual U-Net, la
+comparación descriptiva entre familias MONAI y la referencia contextual proporcionada por nnU-Net.
+En esta fase se explica cómo se obtuvieron las ejecuciones y los modelos seleccionados, mientras que
+la inferencia, el cálculo de métricas y los análisis derivados se reservan para la Fase 5.
+
 ### 4.4.1. Configuración de entrenamiento MONAI
 
 Las configuraciones MONAI finales compartieron los hiperparámetros de optimización de la Tabla 11.
 El presupuesto se fijó mediante una sonda larga de la concatenación, cuya validación alcanzó una
-meseta aproximada entre 12.000 y 15.000 pasos. Se eligieron 15.000 pasos para las corridas finales;
-en el perfil local, cuyo YAML conserva un techo de 25.000, este valor se impuso explícitamente con
+meseta aproximada entre 12.000 y 15.000 pasos. Se eligieron 15.000 pasos para las corridas finales.
+En el perfil local, cuyo YAML conserva un techo de 25.000, este valor se impuso explícitamente con
 `--max-steps 15000`.
 
 **Tabla 11.** Hiperparámetros efectivos del protocolo MONAI final.
@@ -298,20 +328,20 @@ comparación entre familias sigue siendo descriptiva porque cambian el dispositi
 solapamiento de inferencia.
 
 `DiceCELoss` combina el término Dice y la entropía cruzada binaria sobre los tres canales. El
-planificador se adoptó para distribuir la tasa de aprendizaje dentro del presupuesto fijado; no se
+planificador se adoptó para distribuir la tasa de aprendizaje dentro del presupuesto fijado. No se
 utiliza su incorporación como evidencia causal de superioridad frente a la tasa constante de las
 exploraciones preliminares.
 
 ### 4.4.2. Bucle de entrenamiento y selección de puntos de control
 
 `train_one_run` gestiona la carga de lotes, el cálculo de la pérdida, la retropropagación, el paso de
-AdamW, el planificador y la validación periódica. En CUDA usa autocast y escalado de gradiente; en
+AdamW, el planificador y la validación periódica. En CUDA usa autocast y escalado de gradiente. En
 MPS ambas funciones permanecen desactivadas. El entrenamiento se limita por número de pasos, aunque
 el registro conserva también la época alcanzada.
 
 Al final de cada época —y al alcanzar el límite de pasos— se calcula `mean_dice`, la media de Dice
 de ET, TC y WT. Para reducir el coste, esta validación usa un **subconjunto fijo de ocho lotes** del
-inicio de `val.csv`; como el cargador de validación tiene tamaño de lote uno y no baraja, equivale a
+inicio de `val.csv`. Como el cargador de validación tiene tamaño de lote uno y no baraja, equivale a
 ocho estudios. Esta métrica selecciona `best.pt`, mientras que `last.pt` conserva el estado más
 reciente. La elección del mejor punto de control se basa, por tanto, en ese subconjunto y no en los
 243 estudios completos de validación, limitación considerada en el Capítulo 6.
@@ -330,10 +360,10 @@ ablación pueden asociarse al cambio deliberado del bloque de fusión, dentro de
 estocástica medida.
 
 Attention U-Net y Swin-UNETR compartieron entre sí el protocolo MONAI A100, incluidas AMP y tres
-semillas. En cambio, la comparación de estas arquitecturas con las residuales no es causal: además
-de la arquitectura cambian el dispositivo y el solapamiento de inferencia. nnU-Net se separa aún más
-de este protocolo, pues utiliza su propio preprocesamiento y entrenamiento y solo una ejecución del
-*fold* 0.
+semillas. En cambio, la comparación de estas arquitecturas con las residuales no es causal. Además
+de la arquitectura, cambian el dispositivo y el solapamiento de inferencia. nnU-Net se separa aún
+más de este protocolo, pues utiliza su propio preprocesamiento y entrenamiento y solo una ejecución
+del *fold* 0.
 
 La reproducibilidad práctica se apoya en `set_reproducibility`, que propaga cada semilla a Python,
 NumPy, PyTorch y MONAI, y en la conservación de particiones, YAML, comandos, métricas y puntos de
@@ -368,18 +398,28 @@ pérdida, optimizador y presupuesto.
 
 ## 4.5. Evaluación y análisis de resultados (Fase 5)
 
+Esta fase convierte los modelos entrenados en evidencia comparable mediante un proceso común de
+predicción y evaluación. Las subsecciones describen la inferencia y exportación de las máscaras, el
+cálculo de Dice y HD95 con convenciones explícitas para los casos vacíos, el análisis de sensibilidad
+en sujetos no representados en entrenamiento o validación y la información disponible sobre coste
+computacional. La separación entre la generación de predicciones y el cálculo de métricas permite
+aplicar el mismo evaluador a los modelos MONAI y a nnU-Net, además de repetir los agregados sin
+ejecutar de nuevo las redes. Esta sección documenta el procedimiento, las comprobaciones
+complementarias y sus límites. Los valores obtenidos y su interpretación conjunta se presentan en el
+Capítulo 5.
+
 ### 4.5.1. Inferencia y exportación de predicciones
 
 Los modelos MONAI se infieren con `sliding_window_inference` sobre ventanas 128³. Las variantes
-residuales ejecutadas en MPS usan solapamiento **0,25** y tamaño de lote de ventana 1; Attention
+residuales ejecutadas en MPS usan solapamiento **0,25** y tamaño de lote de ventana 1. Attention
 U-Net y Swin-UNETR, ejecutados en A100, usan solapamiento **0,50** y tamaño de lote de ventana 2. El
 código no especifica `mode`, por lo que MONAI emplea su mezcla constante predeterminada, no mezcla
 gaussiana. nnU-Net utiliza su procedimiento de inferencia propio.
 
 El subcomando `predict` reconstruye el modelo MONAI desde su YAML, carga `best.pt`, aplica sigmoide
 y umbral 0,5, fuerza el anidamiento ET ⊂ TC ⊂ WT y guarda un NIfTI por estudio. El subcomando
-`evaluate` es posterior e independiente: lee esos NIfTI y las máscaras de referencia y calcula las
-métricas. Esta separación permite repetir el cálculo sin volver a ejecutar la red.
+`evaluate` es posterior e independiente, ya que lee esos NIfTI y las máscaras de referencia y calcula
+las métricas. Esta separación permite repetir el cálculo sin volver a ejecutar la red.
 
 ### 4.5.2. Métricas de evaluación
 
@@ -388,13 +428,13 @@ El rendimiento se cuantifica con Dice y HD95 por región mediante `tfm_brats/met
 - **Dice** mide el solapamiento. Se asigna Dice = 1 cuando predicción y referencia están ambas
   vacías, y Dice = 0 cuando solo una de ellas lo está.
 - **HD95** calcula el percentil 95 de las distancias simétricas entre superficies usando el espaciado
-  real del NIfTI. Si ambas máscaras están vacías se asigna HD95 = 0; si exactamente una está vacía,
+  real del NIfTI. Si ambas máscaras están vacías se asigna HD95 = 0. Si exactamente una está vacía,
   el resultado es infinito.
 
 Los resúmenes de HD95 conservan los ceros de los casos doblemente vacíos y excluyen los infinitos
 del promedio. Por ello, el Capítulo 5 presenta cada media junto al número de estudios con valor
-finito. Las métricas son internas y por región; no reproducen el protocolo oculto ni las métricas
-*lesion-wise* del reto oficial.
+finito. Las métricas son internas y se calculan por región, por lo que no reproducen el protocolo
+oculto ni las métricas *lesion-wise* del reto oficial BraTS-GLI 2024.
 
 ### 4.5.3. Análisis de sensibilidad por sujeto
 
@@ -410,7 +450,7 @@ El número de parámetros se obtuvo de los modelos instanciados. En la *pipeline
 pared se registra con `perf_counter` desde el inicio del entrenamiento hasta la última validación, y
 en CUDA se consulta el máximo de memoria asignada por PyTorch. Esta medida no está disponible de
 forma equivalente en MPS. Para nnU-Net, el tiempo se recuperó de las marcas del registro entre el
-inicio de la época 0 y `Training done`; no incluye planificación, preprocesamiento, validación final
+inicio de la época 0 y `Training done`. No incluye planificación, preprocesamiento, validación final
 completa ni inferencia. Al no existir tiempos de inferencia y memoria homogéneos para todos los
 modelos, el Capítulo 5 limita la comparación computacional a los registros conservados.
 

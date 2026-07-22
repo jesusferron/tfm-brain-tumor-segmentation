@@ -31,8 +31,8 @@ de trabajo y de las familias de modelos. Esta fase fija el alcance y la pregunta
 calidad para verificar la integridad de los estudios y sus modalidades, y generación de particiones
 estratificadas y reproducibles de entrenamiento, validación y test. La partición se definió por
 estudio de imagen, no por sujeto. Por ello, los identificadores completos no se repiten entre
-particiones, pero un mismo sujeto puede aportar estudios a más de una de ellas; esta circunstancia
-se tiene en cuenta al interpretar la generalización.
+particiones, pero un mismo sujeto puede aportar estudios a más de una de ellas. Esta circunstancia se
+tiene en cuenta al interpretar la generalización.
 
 **Fase 3 — Diseño e implementación del *pipeline*.** Construcción del sistema experimental: entorno
 de cómputo, organización del código, preprocesamiento y aumento de datos, formulación del problema
@@ -43,8 +43,8 @@ nnU-Net como referencia externa.
 **Fase 4 — Experimentación.** Entrenamiento de los modelos y ejecución del estudio de ablación de
 las estrategias de fusión. La comparación causal se restringe a las cuatro estrategias construidas
 sobre la misma Residual U-Net 3D, que comparten datos, arquitectura, optimización y protocolo de
-inferencia. Las configuraciones MONAI se repitieron con tres semillas; nnU-Net se ejecutó una sola
-vez con su propio protocolo y se empleó como referencia contextual.
+inferencia. Las configuraciones MONAI se repitieron con tres semillas. A su vez, nnU-Net se ejecutó
+una sola vez con su propio protocolo y se empleó como referencia contextual.
 
 **Fase 5 — Evaluación y análisis de resultados.** Inferencia sobre la partición de test, cálculo de
 Dice y HD95 por región, análisis de la variabilidad entre semillas y estudio de la huella
@@ -66,8 +66,7 @@ La Tabla 3 resume las cinco fases y las actividades que delimitan cada una.
 
 La tabla muestra la separación entre la preparación del sistema y su evaluación: el test no se usa
 para seleccionar puntos de control, y la interpretación de los resultados se realiza después de
-congelar las configuraciones finales. Esta reserva se aplica a los estudios completos; no equivale a
-una separación independiente por sujeto.
+congelar las configuraciones finales.
 
 ## 3.3. Correspondencia entre metodología y desarrollo
 
@@ -90,8 +89,8 @@ concentra en el siguiente los parámetros, componentes de código y decisiones d
 
 ## 3.4. Cronograma
 
-El trabajo se desarrolló entre mayo y julio de 2026. La Tabla 5 presenta el cronograma por fases;
-dado el carácter incremental de la metodología, algunas actividades se solaparon y los hallazgos de
+El trabajo se desarrolló entre mayo y julio de 2026. La Tabla 5 presenta el cronograma por fases.
+Dado el carácter incremental de la metodología, algunas actividades se solaparon y los hallazgos de
 experimentación motivaron revisiones de implementación.
 
 **Tabla 5.** Cronograma del proyecto por fases y actividades.
@@ -104,7 +103,7 @@ experimentación motivaron revisiones de implementación.
 | 4. Experimentación | Baselines; Swin-UNETR; nnU-Net; sonda de convergencia; ablación y multi-semilla | Junio – julio 2026 |
 | 5. Evaluación y análisis | Inferencia y métricas sobre test; análisis comparativo y redacción de resultados | Julio 2026 |
 
-El solapamiento principal se produjo entre las fases 3 y 4: las pruebas de rendimiento condujeron a
+El solapamiento principal se produjo entre las fases 3 y 4. Las pruebas de rendimiento condujeron a
 copiar los datos al disco local en la nube, y el diagnóstico de la compuerta original llevó a
 incorporar el descriptor media+desviación. El detalle de estas adaptaciones se desarrolla en el
 Capítulo 4.

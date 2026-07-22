@@ -9,17 +9,13 @@ permite reconstruir los entrenamientos pesados sin disponer de los datos y del e
 - Repositorio remoto configurado:
   [https://github.com/jesusferron/tfm-brain-tumor-segmentation](https://github.com/jesusferron/tfm-brain-tumor-segmentation).
 - Rama de trabajo: `main`.
-- **Commit de entrega: `PENDIENTE_COMMIT_FINAL`.** Este marcador debe sustituirse por el hash del
-  commit que corresponda exactamente al código, configuraciones, resultados y memoria entregados.
-- Antes de entregar debe comprobarse que la URL anterior es accesible para el tribunal. La presencia
-  de un remoto Git no demuestra por sí sola que el repositorio sea público.
 
-Una vez fijado el commit, la copia exacta puede obtenerse con:
+La versión disponible en la rama principal puede obtenerse con:
 
 ```bash
 git clone https://github.com/jesusferron/tfm-brain-tumor-segmentation.git
 cd tfm-brain-tumor-segmentation
-git checkout PENDIENTE_COMMIT_FINAL
+git checkout main
 ```
 
 ## A.2. Entorno

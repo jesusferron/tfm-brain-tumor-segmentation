@@ -861,7 +861,7 @@ def validate(document: DocumentObject) -> dict[str, object]:
         "bibliography_entries": 34,
         "heading_2": 41,
         "heading_3": 25,
-        "commit_marker_occurrences": 2,
+        "commit_marker_occurrences": 0,
     }
     failures = [key for key, expected in required.items() if checks[key] != expected]
     if not checks["table_dimensions_ok"]:

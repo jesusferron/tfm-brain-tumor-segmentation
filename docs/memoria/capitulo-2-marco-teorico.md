@@ -3,13 +3,13 @@
 Este capítulo presenta los fundamentos necesarios para situar la aportación del TFM. Primero se
 describe la evolución desde las redes completamente convolucionales hasta las arquitecturas 3D con
 conexiones residuales, atención y *Transformers*. A continuación se ordena la literatura sobre
-fusión multimodal distinguiendo dos decisiones que a menudo se confunden: **en qué etapa** se
-integran las modalidades y **mediante qué regla** se combinan. Por último, se introduce el
-*benchmark* BraTS-GLI 2024, se formalizan las métricas de evaluación, se delimita el análisis de
-coste computacional y se justifican las implementaciones consideradas en el trabajo. Esta revisión
-permite concretar la brecha abordada: comprobar de forma controlada si una ponderación ligera y
-dependiente de la entrada aporta ventajas frente a la concatenación, sin cambiar la red de
-segmentación que recibe las modalidades.
+fusión multimodal distinguiendo dos decisiones que a menudo se confunden. La primera es **en qué
+etapa** se integran las modalidades; la segunda, **mediante qué regla** se combinan. Por último, se
+introduce el *benchmark* BraTS-GLI 2024, se formalizan las métricas de evaluación, se delimita el
+análisis de coste computacional y se justifican las implementaciones consideradas en el trabajo.
+Esta revisión permite concretar la brecha abordada, que consiste en comprobar de forma controlada si
+una ponderación ligera y dependiente de la entrada aporta ventajas frente a la concatenación, sin
+cambiar la red de segmentación que recibe las modalidades.
 
 ## 2.1. De las redes completamente convolucionales a U-Net 3D
 
@@ -39,12 +39,22 @@ en Dice para afrontar el fuerte desequilibrio entre fondo y lesión (Milletari e
 El procesamiento 3D conserva más contexto anatómico, pero incrementa de manera pronunciada la
 memoria ocupada por las activaciones. Por ello, los sistemas volumétricos suelen entrenarse sobre
 parches y reconstruir la predicción completa mediante ventanas solapadas. El tamaño de parche pasa a
-ser una decisión conjunta de contexto, resolución y memoria: un parche mayor aporta más información
-global, pero limita el tamaño de lote o la capacidad de la red. Esta tensión explica por qué una
+ser una decisión conjunta de contexto, resolución y memoria. Un parche mayor aporta más información
+global, pero limita el tamaño del lote o la capacidad de la red. Esta tensión explica por qué una
 arquitectura teóricamente más expresiva no es necesariamente la mejor bajo un presupuesto de
 cómputo fijo.
 
 ## 2.2. Refinamientos convolucionales: residuos, atención y auto-configuración
+
+Sobre la estructura básica de U-Net se han desarrollado mejoras que actúan sobre distintos
+componentes del sistema. Esta sección revisa tres especialmente relevantes para el diseño y la
+interpretación de los experimentos: las conexiones residuales, que facilitan la optimización de
+redes profundas; las compuertas de atención, que seleccionan las características transmitidas por
+las conexiones de salto; y nnU-Net, que automatiza decisiones de configuración del *pipeline*
+completo. Aunque las tres propuestas parten de la familia U-Net, no resuelven el mismo problema ni
+equivalen a estrategias de fusión multimodal. Esta distinción permite justificar el uso de una
+Residual U-Net como base del estudio, de Attention U-Net como referencia arquitectónica y de
+nnU-Net como referencia externa.
 
 ### 2.2.1. Conexiones residuales
 
@@ -57,16 +67,16 @@ $$
 $$
 
 donde $\mathcal{F}$ aprende el residuo respecto de la identidad. Este camino directo facilita la
-propagación de información y gradientes y permitió entrenar redes considerablemente más profundas
+propagación de información y gradientes y permite entrenar redes considerablemente más profundas
 (He et al., 2016). En una **Residual U-Net**, estos bloques se incorporan al codificador y al
 decodificador sin eliminar las conexiones de salto entre ambos caminos. Se preserva así la
 estructura multiescala de U-Net y se mejora la optimización interna de cada nivel.
 
 Las conexiones residuales no deben confundirse con una estrategia de fusión multimodal. Un bloque
-residual modifica cómo se transforman las características dentro de la red; la fusión determina
-cómo llegan al modelo las distintas secuencias MRI. Esta independencia permite mantener fija una
-Residual U-Net 3D y cambiar únicamente la regla de combinación de modalidades, que es el diseño del
-estudio de ablación de este TFM.
+residual modifica cómo se transforman las características dentro de la red. Por su parte, la fusión
+determina cómo llegan al modelo las distintas secuencias MRI. Esta independencia permite mantener
+fija una Residual U-Net 3D y cambiar únicamente la regla de combinación de modalidades, que es el
+diseño del estudio de ablación de este TFM.
 
 ### 2.2.2. Compuertas de atención
 
@@ -75,14 +85,14 @@ Las conexiones de salto de U-Net transmiten tanto señales relevantes como activ
 decodificador para modular espacialmente las características del codificador antes de combinarlas
 (Oktay et al., 2018). El mecanismo dirige capacidad hacia regiones compatibles con el objetivo y
 puede reducir respuestas irrelevantes sin exigir una red de localización separada. El trabajo
-original se validó sobre segmentación abdominal; su utilidad en gliomas debe, por tanto, evaluarse
+original se validó sobre segmentación abdominal. Su utilidad en gliomas debe, por tanto, evaluarse
 experimentalmente y no asumirse por traslación directa entre dominios.
 
 Esta atención sobre conexiones de salto tampoco equivale a ponderar modalidades. La primera asigna
-relevancia a posiciones y características internas; una compuerta de modalidad decide cuánto
-contribuye cada secuencia de entrada. Attention U-Net se incluye en este TFM como referencia
-arquitectónica contextual, mientras que la hipótesis principal se estudia sobre una red residual
-fija.
+relevancia a posiciones y características internas. Por el contrario, una compuerta de modalidad
+decide cuánto contribuye cada secuencia de entrada. Attention U-Net se incluye en este TFM como
+referencia arquitectónica contextual, mientras que la hipótesis principal se estudia sobre una red
+residual fija.
 
 ### 2.2.3. nnU-Net como *pipeline* auto-configurable
 
@@ -104,9 +114,9 @@ El mecanismo de autoatención de los *Transformers* relaciona cada elemento de u
 demás y facilita el modelado de dependencias de largo alcance (Vaswani et al., 2017). Vision
 Transformer trasladó esta idea a imágenes al dividirlas en parches, proyectarlos como *tokens* y
 procesarlos mediante un codificador Transformer (Dosovitskiy et al., 2021). En segmentación médica
-3D, la ventaja potencial es incorporar contexto distribuido por el volumen; la contrapartida es que
-la autoatención global crece cuadráticamente con el número de *tokens*, que puede ser muy elevado en
-datos volumétricos.
+3D, la ventaja potencial es incorporar contexto distribuido por el volumen. Sin embargo, la
+contrapartida es que la autoatención global crece cuadráticamente con el número de *tokens*, que puede
+ser muy elevado en datos volumétricos.
 
 Swin Transformer limita la atención a ventanas locales y desplaza esas ventanas entre bloques para
 permitir intercambio de información entre regiones vecinas. Además, construye una jerarquía de
@@ -119,12 +129,12 @@ En imagen médica se han propuesto varias formas de integrar este paradigma. **U
 Transformer como codificador de una secuencia de parches volumétricos y conecta representaciones de
 distintas profundidades con un decodificador convolucional (Hatamizadeh et al., 2022). **Swin UNETR**
 reemplaza ese codificador por una jerarquía Swin 3D y conserva un decodificador con conexiones de
-salto; fue presentado por Tang et al. (2022) dentro de un marco de preentrenamiento autosupervisado.
+salto. Fue presentado por Tang et al. (2022) dentro de un marco de preentrenamiento autosupervisado.
 La implementación utilizada en este TFM corresponde a la arquitectura disponible en MONAI y se
 entrena con el protocolo definido para el proyecto, sin atribuirle por ello los resultados del
 preentrenamiento del artículo original.
 
-**TransBTS** adopta otra solución híbrida: una CNN extrae representaciones espaciales 3D y un
+**TransBTS** adopta otra solución híbrida. Una CNN extrae representaciones espaciales 3D y un
 Transformer situado en la parte profunda modela relaciones globales antes de la decodificación
 (Wang et al., 2021). En paralelo, propuestas como UNETR++ buscan reducir el coste de la atención 3D
 mediante bloques más eficientes (Shaker et al., 2024). En conjunto, estas arquitecturas amplían el
@@ -137,37 +147,38 @@ garantiza un resultado superior.
 
 Las secuencias T1n, T1c, T2w y FLAIR observan el mismo volumen desde contrastes complementarios. La
 fusión multimodal especifica cómo se ponen en relación esas fuentes. Para ordenar sus variantes es
-necesario separar dos ejes: la **etapa de fusión**, es decir, el punto del flujo en el que se unen las
-modalidades, y la **regla de combinación**, que define la operación concreta aplicada en ese punto.
-«Adaptativa» describe una regla dependiente de los datos, no una etapa por sí misma.
+necesario separar dos ejes. El primero es la **etapa de fusión**, es decir, el punto del flujo en el
+que se unen las modalidades; el segundo, la **regla de combinación**, que define la operación
+concreta aplicada en ese punto. «Adaptativa» describe una regla dependiente de los datos, no una etapa
+por sí misma.
 
 Según la etapa, se distinguen tres categorías principales. En la **fusión temprana**, las
-modalidades se combinan antes del extractor o en sus primeras capas; es eficiente y permite aprender
+modalidades se combinan antes del extractor o en sus primeras capas. Es eficiente y permite aprender
 interacciones desde el inicio, aunque normalmente presupone que todas las secuencias están
 disponibles y alineadas. En la **fusión intermedia**, cada modalidad dispone de una rama propia —o
 de un procesamiento parcialmente separado— y las características se integran en uno o varios
 niveles. Esta opción puede preservar representaciones específicas de cada contraste, a cambio de
 mayor complejidad. En la **fusión tardía**, cada modalidad genera predicciones que se combinan al
-final; ofrece modularidad, pero replica gran parte del cálculo y retrasa las interacciones entre
+final. Ofrece modularidad, pero replica gran parte del cálculo y retrasa las interacciones entre
 secuencias. Los diseños híbridos pueden emplear más de una etapa, como muestran propuestas que
 combinan fusión a nivel de imagen, características o contexto global (Liu et al., 2022; Wang et al.,
 2021; Zhou et al., 2022).
 
 A partir de estas definiciones, la Tabla 1 sintetiza las tres categorías. La columna de reglas
-incluye ejemplos posibles y no establece una correspondencia exclusiva: una ponderación aprendida,
+incluye ejemplos posibles y no establece una correspondencia exclusiva. Una ponderación aprendida,
 por ejemplo, puede aplicarse tanto a la entrada como a características intermedias.
 
 **Tabla 1.** Etapas de fusión multimodal en segmentación de imagen médica.
 
 | Etapa | Representación que se combina | Reglas habituales | Ventajas | Limitaciones |
 | :-- | :-- | :-- | :-- | :-- |
-| Temprana (*early fusion*) | Imágenes o canales antes del codificador | Concatenación, suma o ponderación de modalidades | Integración sencilla; reutiliza un único extractor; coste adicional reducido | Dependencia de modalidades presentes y registradas; menor separación explícita de rasgos específicos |
-| Intermedia (*feature-level fusion*) | Características de ramas específicas en uno o varios niveles | Concatenación, suma, atención cruzada o compuertas | Modela relaciones multiescala y conserva representaciones por modalidad | Más parámetros y activaciones; aumenta la complejidad de entrenamiento e integración |
-| Tardía (*decision-level fusion*) | Mapas de probabilidad o decisiones de modelos separados | Media, voto, producto o ensamblado aprendido | Modularidad y posibilidad de especialización por modalidad | Duplica cálculo; las modalidades no interactúan durante la extracción temprana de rasgos |
+| Temprana (*early fusion*) | Imágenes o canales antes del codificador | Concatenación, suma o ponderación de modalidades | Integración sencilla; reutiliza un único extractor; coste adicional reducido | Dependencia de modalidades presentes y registradas. Menor separación explícita de rasgos específicos |
+| Intermedia (*feature-level fusion*) | Características de ramas específicas en uno o varios niveles | Concatenación, suma, atención cruzada o compuertas | Modela relaciones multiescala y conserva representaciones por modalidad | Más parámetros y activaciones. Aumenta la complejidad de entrenamiento e integración |
+| Tardía (*decision-level fusion*) | Mapas de probabilidad o decisiones de modelos separados | Media, voto, producto o ensamblado aprendido | Modularidad y posibilidad de especialización por modalidad | Duplica cálculo. Las modalidades no interactúan durante la extracción temprana de rasgos |
 
 La comparación muestra que la etapa no determina por sí sola el grado de adaptación. La fusión
 temprana puede ser una concatenación sin pesos explícitos o una ponderación condicionada por la
-entrada; de igual modo, una fusión intermedia puede usar coeficientes fijos. La decisión relevante
+entrada. De igual modo, una fusión intermedia puede usar coeficientes fijos. La decisión relevante
 depende del equilibrio buscado entre interacción multimodal, coste y facilidad para aislar el efecto
 experimental.
 
@@ -176,7 +187,7 @@ experimental.
 Sean $\mathbf{x}_1,\ldots,\mathbf{x}_M$ las modalidades registradas de una muestra. La
 **concatenación** forma $\mathbf{x}=[\mathbf{x}_1;\ldots;\mathbf{x}_M]$ y deja que la primera capa
 aprenda filtros diferentes para cada canal. No realiza una media ni impone matemáticamente el mismo
-peso a todas las modalidades; su rasgo distintivo es que carece de un parámetro separado e
+peso a todas las modalidades. Su rasgo distintivo es que carece de un parámetro separado e
 interpretable que reajuste de forma explícita su contribución.
 
 Una **ponderación global estática** aprende un vector de parámetros compartido por todas las
@@ -220,13 +231,21 @@ CNN-Transformer (Wang et al., 2021).
 Estos trabajos demuestran que la fusión puede realizarse en múltiples niveles, pero también
 introducen simultáneamente ramas, mecanismos de atención o codificadores diferentes. En esas
 condiciones resulta difícil atribuir una mejora exclusivamente a la ponderación de modalidades. La
-brecha que aborda este TFM es deliberadamente más acotada: aportar evidencia controlada sobre si una
-regla temprana, global por muestra y de muy pocos parámetros supera a la concatenación y a una
-ponderación estática cuando la Residual U-Net 3D, los datos y el entrenamiento se mantienen fijos.
-El objetivo no es reivindicar una nueva familia general de fusión ni resolver el escenario de
+brecha que aborda este TFM es deliberadamente más acotada y consiste en aportar evidencia controlada
+sobre si una regla temprana, global por muestra y de muy pocos parámetros supera a la concatenación y
+a una ponderación estática cuando la Residual U-Net 3D, los datos y el entrenamiento se mantienen
+fijos. El objetivo no es reivindicar una nueva familia general de fusión ni resolver el escenario de
 modalidades ausentes, sino medir de forma reproducible el valor añadido de esa decisión concreta.
 
 ## 2.5. BraTS-GLI 2024 y evaluación de la segmentación
+
+La interpretación de los resultados exige considerar conjuntamente el escenario en el que se
+obtienen y las métricas empleadas. Esta sección presenta, en primer lugar, las particularidades de
+BraTS-GLI 2024 como *benchmark* de gliomas post-tratamiento y distingue la evaluación interna del
+TFM del protocolo oficial del reto. A continuación, define Dice y HD95, dos medidas complementarias
+que resumen, respectivamente, el solapamiento de las regiones segmentadas y el error en sus límites.
+Este marco permite comprender el alcance de los valores reportados en el Capítulo 5 y evita
+atribuirles una validez clínica u oficial superior a la respaldada por el protocolo.
 
 ### 2.5.1. Del *benchmark* BraTS al escenario post-tratamiento
 
@@ -238,7 +257,7 @@ delimitación (de Verdier et al., 2024). Las cuatro secuencias utilizadas por es
 T2w y FLAIR, y la evaluación se expresa de manera consistente para las regiones anidadas ET, TC y
 WT.
 
-El contexto post-tratamiento tiene además carácter longitudinal: el seguimiento clínico puede
+El contexto post-tratamiento tiene además carácter longitudinal. El seguimiento clínico puede
 producir más de un estudio del mismo sujeto en momentos distintos. Esta propiedad es relevante para
 interpretar la independencia de las observaciones y para diseñar particiones, aunque el
 procedimiento concreto de separación pertenece a los capítulos de metodología y desarrollo. El
@@ -262,9 +281,9 @@ $$
 {\lvert P_r\rvert+\lvert G_r\rvert}.
 $$
 
-Dice toma valores entre 0 y 1 y mide solapamiento: 1 representa coincidencia perfecta. Es sensible
-a errores relativos en regiones pequeñas y no informa directamente de la distancia física entre
-fronteras (Dice, 1945; Taha & Hanbury, 2015).
+Dice toma valores entre 0 y 1 y mide el solapamiento. Un valor de 1 representa una coincidencia
+perfecta. Es sensible a errores relativos en regiones pequeñas y no informa directamente de la
+distancia física entre fronteras (Dice, 1945; Taha & Hanbury, 2015).
 
 Para complementar el solapamiento se emplea la **distancia de Hausdorff al percentil 95**. Sean
 $\partial P_r$ y $\partial G_r$ las superficies de ambas máscaras y
@@ -284,7 +303,7 @@ el milímetro y un valor menor indica fronteras más próximas (Huttenlocher et 
 Hanbury, 2015).
 
 Los casos vacíos requieren convenciones explícitas. En la evaluación interna, si predicción y
-referencia están vacías se asigna Dice = 1 y HD95 = 0; si solo una está vacía, se asigna Dice = 0 y
+referencia están vacías, se asigna Dice = 1 y HD95 = 0. Si solo una está vacía, se asigna Dice = 0 y
 HD95 infinita. Los valores infinitos se conservan a nivel de caso para identificar el fallo, pero se
 excluyen de los agregados finitos de HD95. Estas reglas, junto con el cálculo separado para ET, TC y
 WT, evitan que una implementación implícita altere la interpretación de los resultados.
@@ -301,7 +320,7 @@ pueden diferir notablemente en memoria o latencia por la forma de sus operacione
 
 Las medidas temporales solo son comparables si se documentan hardware, versiones de software,
 tamaño de entrada, precisión, lote y procedimiento de medida. Además, el entrenamiento es
-estocástico y el tiempo hasta alcanzar una solución presenta variabilidad; los principios de
+estocástico y el tiempo hasta alcanzar una solución presenta variabilidad. Los principios de
 *benchmarking* de MLPerf subrayan la necesidad de fijar tanto el sistema como el objetivo medido
 (Mattson et al., 2020). Del mismo modo, publicar configuraciones, particiones, semillas y código
 favorece que otros investigadores puedan reconstruir y comprobar los hallazgos (Pineau et al.,
@@ -316,18 +335,18 @@ de eficiencia.
 
 ## 2.7. Implementaciones y repositorios considerados
 
-La elección de software se realizó atendiendo a cinco criterios: correspondencia con las familias
+La elección de software se realizó conforme a cinco criterios: correspondencia con las familias
 arquitectónicas relevantes, soporte de tensores 3D y entradas multicanal, disponibilidad de una
 implementación pública identificable, esfuerzo de integración con el *pipeline* y licencia del
 código. MONAI aporta componentes específicos de imagen médica sobre PyTorch y una interfaz común
 para transformaciones, redes e inferencia (Cardoso et al., 2022). nnU-Net y TransBTS se evaluaron a
-partir de sus repositorios oficiales; el primero constituye un sistema externo auto-configurable y
+partir de sus repositorios oficiales. El primero constituye un sistema externo auto-configurable y
 el segundo una alternativa híbrida especializada.
 
 La Tabla 2 aplica esos criterios a las opciones que influyeron en el diseño. «Multimodal» significa
 aquí que la implementación admite las modalidades como canales o dispone de un flujo específico
-para ellas; no implica que incorpore ponderación explícita. La licencia indicada corresponde al
-**software** consultado. El acceso y uso de BraTS-GLI se rigen por las condiciones propias del
+para ellas, lo que no implica que incorpore ponderación explícita. La licencia indicada corresponde
+al **software** consultado. El acceso y uso de BraTS-GLI se rigen por las condiciones propias del
 conjunto de datos y no se deducen de la licencia de estos repositorios.
 
 **Tabla 2.** Comparación de implementaciones y repositorios relevantes para el TFM.
@@ -363,6 +382,6 @@ clasificación oficial de BraTS. Su contribución consiste en comparar concatena
 global estática y dos compuertas condicionadas por estadísticas de la entrada antes del mismo
 codificador residual, repetir la comparación con varias semillas y documentar el coste añadido. Las
 arquitecturas Attention U-Net, Swin UNETR y nnU-Net proporcionan contexto, no sustituyen ese
-contraste controlado. De este modo, tanto un resultado positivo como uno negativo responde al
-objetivo científico: determinar si la adaptación propuesta aporta una mejora consistente y a qué
+contraste controlado. De este modo, tanto un resultado positivo como uno negativo responden al
+objetivo científico de determinar si la adaptación propuesta aporta una mejora consistente y a qué
 coste bajo el protocolo definido.

@@ -116,8 +116,8 @@ no se concentraban de forma sistemática en una única modalidad. Este comportam
 descriptores globales empleados aportaron una señal limitada para adaptar la fusión a cada entrada,
 aunque no permite identificar por sí solo la causa de las corridas de bajo rendimiento.
 
-Desde una perspectiva práctica, la concatenación fue la alternativa más parsimoniosa del estudio:
-no requirió parámetros adicionales y presentó, junto con la ponderación global, la menor
+Desde una perspectiva práctica, la concatenación fue la alternativa más parsimoniosa del estudio,
+ya que no requirió parámetros adicionales y presentó, junto con la ponderación global, la menor
 variabilidad entre semillas. La evidencia obtenida no justifica añadir las compuertas evaluadas a
 esta Residual U-Net bajo el protocolo utilizado. Esta conclusión no debe extrapolarse a mecanismos
 de atención espacial, fusión de características intermedias o diseños adaptativos con señales de

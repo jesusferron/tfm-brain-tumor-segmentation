@@ -26,11 +26,11 @@ automática se emplean habitualmente cuatro secuencias convencionales: T1 nativa
 contraste (T1c), T2 ponderada (T2w) y recuperación de la inversión atenuada por fluido (FLAIR). La
 secuencia T1n proporciona una referencia anatómica de base, mientras que T1c permite identificar las
 regiones que realzan tras la administración de contraste, asociado al aumento de permeabilidad de la
-barrera hematoencefálica; sin embargo, ese realce no representa por sí solo toda la extensión del
+barrera hematoencefálica. Sin embargo, ese realce no representa por sí solo toda la extensión del
 tejido tumoral biológicamente activo. Las secuencias T2w y FLAIR son sensibles al aumento del
-contenido de agua; en particular, FLAIR suprime la señal del líquido cefalorraquídeo y facilita la
+contenido de agua. En particular, FLAIR suprime la señal del líquido cefalorraquídeo y facilita la
 visualización de alteraciones peritumorales que pueden incluir edema e infiltración. Ninguna
-modalidad describe por sí sola toda la lesión: su combinación proporciona información complementaria
+modalidad describe por sí sola toda la lesión. Su combinación proporciona información complementaria
 para delimitar el tumor y sus subregiones (Langen et al., 2017; Kouli et al., 2022).
 
 Cuando se requiere una cuantificación volumétrica, la delimitación manual de estas regiones por
@@ -38,11 +38,11 @@ especialistas resulta compleja y costosa. Los límites difusos, la heterogeneida
 la extensión tridimensional favorecen la variabilidad entre observadores e incluso entre anotaciones
 de un mismo profesional, además de consumir un tiempo considerable. La segmentación automática se
 plantea, por tanto, como herramienta de apoyo capaz de reducir la carga de trabajo y proporcionar
-estimaciones más consistentes. Aun así, el problema no está completamente resuelto: el rendimiento
-disminuye en algunas subregiones y la generalización a imágenes de otros centros sigue siendo un
-reto (Kouli et al., 2022); asimismo, unas métricas favorables no garantizan por sí solas la utilidad
-clínica de una segmentación, lo que hace necesaria su evaluación por especialistas (Hoebel et al.,
-2024).
+estimaciones más consistentes. Aun así, el problema no está completamente resuelto, ya que el
+rendimiento disminuye en algunas subregiones y la generalización a imágenes de otros centros sigue
+siendo un reto (Kouli et al., 2022). Asimismo, unas métricas favorables no garantizan por sí solas la
+utilidad clínica de una segmentación, lo que hace necesaria su evaluación por especialistas (Hoebel
+et al., 2024).
 
 En los últimos años, el aprendizaje profundo ha ampliado sus aplicaciones en neuro-oncología
 (detección y clasificación de tumores, segmentación de lesiones, predicción de características
@@ -55,7 +55,7 @@ Dentro de este contexto, el presente Trabajo de Fin de Máster se centra en la *
 automática tridimensional de gliomas a partir de imágenes MRI multimodales**. El sistema se aplica
 exclusivamente a pacientes previamente diagnosticados y no pretende realizar cribado, determinar la
 presencia de un tumor ni diferenciar los gliomas de otras patologías. La investigación estudia cómo
-combinar la información complementaria de las secuencias T1n, T1c, T2w y FLAIR; concretamente,
+combinar la información complementaria de las secuencias T1n, T1c, T2w y FLAIR. Concretamente,
 analiza **si un mecanismo de fusión adaptativa mejora la delimitación de las subregiones tumorales
 frente a la concatenación convencional de modalidades**, manteniendo un coste computacional
 asumible.
@@ -76,10 +76,10 @@ proporciona MRI multiparamétrica y anotaciones expertas para evaluar algoritmos
 Una estrategia habitual para integrar estas secuencias consiste en alinearlas y concatenarlas como
 canales de un único tensor de entrada. Esta fusión temprana es sencilla, introduce un coste
 computacional mínimo y permite que las primeras capas convolucionales aprendan filtros distintos por
-canal; por tanto, no es correcto afirmar que asigne necesariamente el mismo peso a todas las
+canal. Por tanto, no es correcto afirmar que asigne necesariamente el mismo peso a todas las
 modalidades. Su limitación es que no incorpora un mecanismo explícito que estime y reajuste la
-contribución relativa de cada modalidad en función del contenido de la entrada: dicha contribución
-queda representada de forma implícita en los filtros aprendidos.
+contribución relativa de cada modalidad en función del contenido de la entrada, sino que dicha
+contribución queda representada de forma implícita en los filtros aprendidos.
 
 La literatura ha explorado mecanismos de fusión más elaborados para aprovechar las relaciones entre
 modalidades, como la combinación en distintos niveles de la red o los módulos de atención que
@@ -98,11 +98,11 @@ compuerta adaptativa basada en la media y una extensión condicionada por la med
 típica de cada modalidad. La ponderación global aprende un coeficiente por modalidad compartido por
 todas las entradas, mientras que las compuertas adaptativas generan los coeficientes a partir del
 tensor tridimensional procesado. Esos coeficientes se aplican antes del codificador y permanecen
-constantes en el espacio dentro de cada parche o ventana de inferencia; por tanto, el mecanismo es
+constantes en el espacio dentro de cada parche o ventana de inferencia. Por tanto, el mecanismo es
 dependiente de la entrada, pero no constituye una atención espacial ni específica por subregión. La
-inclusión de la ponderación global permite distinguir dos efectos posibles: si basta con aprender
-una jerarquía general entre modalidades o si resulta beneficioso adaptar dicha ponderación al
-contenido de cada muestra.
+inclusión de la ponderación global permite distinguir dos posibilidades: que baste con aprender una
+jerarquía general entre modalidades o que resulte beneficioso adaptar dicha ponderación al contenido
+de cada muestra.
 
 A partir de este planteamiento, la pregunta de investigación se formula así:
 
@@ -122,7 +122,7 @@ El alcance experimental se limita a las imágenes post-tratamiento de BraTS-GLI 
 cuatro modalidades requeridas. **El modelo no se ha entrenado ni validado para realizar cribado,
 diagnosticar la presencia de un tumor, diferenciar los gliomas de otras patologías o trabajar con
 secuencias ausentes**, y sus resultados deben interpretarse dentro del entorno controlado del
-*benchmark*: la evidencia muestra que el rendimiento sobre datos BraTS puede disminuir al aplicar los
+*benchmark*. La evidencia muestra que el rendimiento sobre datos BraTS puede disminuir al aplicar los
 modelos a imágenes clínicas externas con distintas resoluciones o protocolos (Berkley et al., 2023).
 En consecuencia, el trabajo evalúa una estrategia computacional de segmentación y no una herramienta
 lista para uso clínico.
@@ -154,8 +154,8 @@ segmentación como el coste computacional.
 6. Contextualizar los resultados comparándolos con arquitecturas de referencia de mayor complejidad
    (Attention U-Net y Swin-UNETR) y con el *baseline* externo nnU-Net.
 
-Los objetivos se formulan de manera neutra respecto al signo del resultado: el trabajo persigue
-**responder** la pregunta de investigación, sea la respuesta afirmativa o negativa.
+El trabajo persigue **responder** la pregunta de investigación, sea la respuesta afirmativa o
+negativa.
 
 ## 1.4. Organización del documento
 
@@ -164,16 +164,17 @@ la evaluación experimental de la solución.
 
 - **Capítulo 1, Introducción.** Presenta el papel de la imagen médica y la inteligencia artificial en
   neuro-oncología, delimita el problema, formula la pregunta de investigación y fija los objetivos.
-- **Capítulo 2, Marco teórico y estado del arte.** Desarrolla los fundamentos: segmentación 3D de
-  imagen médica, arquitecturas U-Net y variantes, mecanismos de atención, modelos basados en
-  Transformers y estrategias de fusión multimodal; presenta el *benchmark* BraTS y formaliza las
-  métricas Dice y HD95.
+- **Capítulo 2, Marco teórico y estado del arte.** Desarrolla los fundamentos de la segmentación 3D
+  de imagen médica, las arquitecturas U-Net y sus variantes, los mecanismos de atención, los modelos
+  basados en Transformers y las estrategias de fusión multimodal. Presenta el *benchmark* BraTS y
+  formaliza las métricas Dice y HD95.
 - **Capítulo 3, Metodología.** Expone las fases de alto nivel del trabajo (familiarización, análisis y
   preparación de datos, diseño e implementación, experimentación y evaluación), centrándose en el
   proceso y dejando el detalle técnico para el capítulo siguiente.
-- **Capítulo 4, Desarrollo.** Describe la materialización técnica de cada fase: organización del
-  repositorio, *pipeline* MONAI, arquitecturas, mecanismos de fusión, configuración del entrenamiento,
-  inferencia por ventana deslizante y medidas de reproducibilidad.
+- **Capítulo 4, Desarrollo.** Describe la materialización técnica de cada fase, incluida la
+  organización del repositorio, el *pipeline* MONAI, las arquitecturas, los mecanismos de fusión, la
+  configuración del entrenamiento, la inferencia por ventana deslizante y las medidas de
+  reproducibilidad.
 - **Capítulo 5, Resultados.** Compara las estrategias de fusión y las arquitecturas mediante Dice y
   HD95 por región sobre el conjunto de test, y examina el coste computacional.
 - **Capítulo 6, Conclusiones.** Sintetiza los hallazgos, responde a la pregunta de investigación,
