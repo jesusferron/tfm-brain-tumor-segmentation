@@ -56,12 +56,54 @@ FIGURE_ALT_TEXTS = [
     "Arquitectura de fusión multimodal FusionUNet y detalle de la compuerta adaptativa.",
     "Comparación cualitativa de arquitecturas: referencia, nnU-Net, Swin-UNETR, "
     "Attention U-Net y Residual U-Net con concatenación.",
-    "Comparación entre la concatenación y una corrida de bajo rendimiento de "
+    "Comparación entre la concatenación y una ejecución de bajo rendimiento de "
     "la compuerta adaptativa.",
 ]
 
 CAPTION_RE = re.compile(r"^(Tabla|Figura)\s+((?:\d+)|(?:A\.1))\.\s*(.+)$", re.DOTALL)
 IMAGE_RE = re.compile(r"!\[([^\]]*)\]\(([^)]+)\)")
+
+# Canonical child order for ``w:pPr`` from the OOXML paragraph-properties
+# schema (the same order used internally by python-docx's CT_PPr class).
+PPR_TAG_SEQUENCE = (
+    "w:pStyle",
+    "w:keepNext",
+    "w:keepLines",
+    "w:pageBreakBefore",
+    "w:framePr",
+    "w:widowControl",
+    "w:numPr",
+    "w:suppressLineNumbers",
+    "w:pBdr",
+    "w:shd",
+    "w:tabs",
+    "w:suppressAutoHyphens",
+    "w:kinsoku",
+    "w:wordWrap",
+    "w:overflowPunct",
+    "w:topLinePunct",
+    "w:autoSpaceDE",
+    "w:autoSpaceDN",
+    "w:bidi",
+    "w:adjustRightInd",
+    "w:snapToGrid",
+    "w:spacing",
+    "w:ind",
+    "w:contextualSpacing",
+    "w:mirrorIndents",
+    "w:suppressOverlap",
+    "w:jc",
+    "w:textDirection",
+    "w:textAlignment",
+    "w:textboxTightWrap",
+    "w:outlineLvl",
+    "w:divId",
+    "w:cnfStyle",
+    "w:rPr",
+    "w:sectPr",
+    "w:pPrChange",
+)
+PPR_TAG_ORDER = {qn(tag): index for index, tag in enumerate(PPR_TAG_SEQUENCE)}
 
 
 def parse_args() -> argparse.Namespace:
@@ -211,6 +253,35 @@ def remove_numbering(paragraph: Paragraph) -> None:
     num_pr = ppr.find(qn("w:numPr"))
     if num_pr is not None:
         ppr.remove(num_pr)
+
+
+def paragraph_property_order_violations(document: DocumentObject) -> int:
+    """Count ``w:pPr`` nodes whose children are not in canonical OOXML order."""
+    violations = 0
+    for ppr in document._element.xpath(".//w:pPr"):
+        ranks = [PPR_TAG_ORDER.get(child.tag) for child in ppr]
+        if any(rank is None for rank in ranks):
+            violations += 1
+            continue
+        if ranks != sorted(ranks):
+            violations += 1
+    return violations
+
+
+def normalize_paragraph_property_order(document: DocumentObject) -> None:
+    """Put all main-document paragraph properties in canonical OOXML order."""
+    for ppr in document._element.xpath(".//w:pPr"):
+        children = list(ppr)
+        unknown = [child.tag for child in children if child.tag not in PPR_TAG_ORDER]
+        if unknown:
+            raise RuntimeError(f"Unknown w:pPr child tags: {unknown}")
+        ordered = sorted(children, key=lambda child: PPR_TAG_ORDER[child.tag])
+        if children == ordered:
+            continue
+        for child in children:
+            ppr.remove(child)
+        for child in ordered:
+            ppr.append(child)
 
 
 def shade(element, fill: str) -> None:
@@ -381,17 +452,15 @@ def configure_styles(document: DocumentObject) -> None:
     normal.paragraph_format.space_after = Pt(10)
     normal.paragraph_format.line_spacing = 1.15
 
-    for style_name, size in (("Heading 1", 22), ("Heading 2", 16), ("Heading 3", 12)):
+    # Preserve the heading typography from the supplied university template.
+    # The section numbers are already part of the Markdown text, so only
+    # remove inherited automatic numbering without replacing the template's
+    # font, size, colour, spacing, or inheritance chain.
+    for style_name in ("Heading 1", "Heading 2", "Heading 3"):
         style = document.styles[style_name]
-        style.font.name = "Arial"
-        style.font.size = Pt(size)
-        style.font.bold = True
-        style.font.color.rgb = RGBColor(0, 0, 0)
         num_pr = style.element.find("./w:pPr/w:numPr", style.element.nsmap)
         if num_pr is not None:
             num_pr.getparent().remove(num_pr)
-    document.styles["Heading 3"].paragraph_format.space_before = Pt(10)
-    document.styles["Heading 3"].paragraph_format.space_after = Pt(5)
 
     caption = document.styles["Caption"]
     caption.font.name = "Arial"
@@ -525,14 +594,10 @@ def configure_headings_and_paragraphs(document: DocumentObject) -> None:
             in_references = text == "Referencias bibliográficas"
             if text.startswith("Apéndice A"):
                 in_references = False
-            set_no_number(paragraph)
+            remove_numbering(paragraph)
             paragraph.paragraph_format.page_break_before = text != "Resumen"
-            paragraph.paragraph_format.keep_with_next = True
-            paragraph.paragraph_format.keep_together = True
         elif style_name in ("Heading 2", "Heading 3"):
-            set_no_number(paragraph)
-            paragraph.paragraph_format.keep_with_next = True
-            paragraph.paragraph_format.keep_together = True
+            remove_numbering(paragraph)
 
         if style_name == "TOC Heading":
             in_abstract = False
@@ -563,10 +628,14 @@ def configure_headings_and_paragraphs(document: DocumentObject) -> None:
         elif style_name not in ("Heading 1", "Heading 2", "Heading 3", "TOC Heading"):
             paragraph.style = document.styles["Normal"]
 
-        if in_abstract:
-            set_language(paragraph, "en-US")
-        else:
-            set_language(paragraph, "es-ES")
+        # Do not add direct run/paragraph properties to headings: keeping
+        # their formatting style-only avoids Word treating them as detached
+        # variants of the template styles.
+        if style_name not in ("Heading 1", "Heading 2", "Heading 3", "TOC Heading"):
+            if in_abstract:
+                set_language(paragraph, "en-US")
+            else:
+                set_language(paragraph, "es-ES")
 
         # Pandoc character styles preserve semantics; force a compact
         # monospaced face only for inline code and syntax-highlighted tokens.
@@ -827,6 +896,7 @@ def validate(document: DocumentObject) -> dict[str, object]:
         "bibliography_entries": style_counts.get("TFM Bibliography", 0),
         "heading_2": style_counts.get("Heading 2", 0),
         "heading_3": style_counts.get("Heading 3", 0),
+        "ppr_order_violations": paragraph_property_order_violations(document),
         "headings_1": headings,
         "template_instructions_removed": "¡¡¡INFORMATIVO!!!" not in extracted,
         "latex_source_removed": all(
@@ -861,6 +931,7 @@ def validate(document: DocumentObject) -> dict[str, object]:
         "bibliography_entries": 34,
         "heading_2": 41,
         "heading_3": 25,
+        "ppr_order_violations": 0,
         "commit_marker_occurrences": 0,
     }
     failures = [key for key, expected in required.items() if checks[key] != expected]
@@ -920,6 +991,7 @@ def build(args: argparse.Namespace) -> dict[str, object]:
         configure_headings_and_paragraphs(document)
         format_tables(document)
         format_figures(document)
+        normalize_paragraph_property_order(document)
         enable_field_updates(document)
         clean_properties(document, args.title)
         checks = validate(document)

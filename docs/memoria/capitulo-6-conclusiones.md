@@ -1,220 +1,158 @@
 # 6. Conclusiones
 
-Este capítulo sintetiza los principales resultados del trabajo, responde a la pregunta de
-investigación formulada en el Capítulo 1, valora el grado de cumplimiento de los objetivos y delimita
-el alcance de las conclusiones. Finalmente, presenta las principales limitaciones del estudio y las
-líneas de trabajo que se derivan de ellas.
-
 ## 6.1. Respuesta a la pregunta de investigación
 
-La pregunta de investigación planteaba si una ponderación explícita y ligera de las modalidades
-T1n, T1c, T2w y FLAIR —en particular, una compuerta adaptativa condicionada por la entrada— podía
-mejorar de forma consistente la segmentación 3D de ET, TC y WT frente a la concatenación directa,
-manteniendo fija la Residual U-Net 3D y un coste computacional asumible.
+Bajo el protocolo evaluado, las compuertas ligeras no mejoraron de forma consistente la
+concatenación: dos de las tres ejecuciones de cada variante fueron comparables al control, pero una
+ejecución de cada una presentó un rendimiento muy inferior. La ponderación global aprendida e
+independiente de la entrada tampoco mostró una ventaja sistemática; su Dice medio (0,706 ± 0,006)
+fue prácticamente igual al de la concatenación (0,706 ± 0,005).
 
-Los resultados obtenidos no aportan evidencia de una mejora consistente. La concatenación alcanzó
-un Dice medio de 0,706 ± 0,005 y la ponderación global estática obtuvo 0,706 ± 0,006. La diferencia
-entre ambas medias fue inferior a 0,001 y cambió de signo entre semillas. Por tanto, en las
-ejecuciones realizadas no se observó una ventaja sistemática asociada a la ponderación global.
+Los registros de validación muestran que las dos ejecuciones débiles permanecieron alejadas de las
+demás durante el entrenamiento, no solo al final. En un diagnóstico exploratorio de ejecuciones
+preliminares, las compuertas aplicadas a 40 volúmenes completos produjeron pesos con muy poca
+variación entre estudios y entropía elevada, sin concentración extrema en una modalidad. Como el
+modelo calcula los pesos sobre parches durante el entrenamiento y sobre ventanas durante la
+inferencia, el diagnóstico no caracteriza su variación operativa, no se extiende a los puntos de
+control finales ni permite identificar la causa de las ejecuciones débiles.
 
-Las dos variantes adaptativas presentaron medias inferiores, de 0,586 ± 0,169 y 0,592 ± 0,171,
-debido principalmente a una corrida de bajo rendimiento en cada configuración. Las restantes
-corridas obtuvieron valores próximos a los de las estrategias no adaptativas. Con tres repeticiones
-por variante no es posible estimar una probabilidad general de fallo, establecer diferencias
-estadísticamente significativas ni determinar la causa de esas ejecuciones. Sí puede concluirse que,
-dentro del presupuesto evaluado, las variantes adaptativas mostraron una variabilidad entre semillas
-mayor que la concatenación y la ponderación global.
+Los mecanismos añadieron entre 4 y 108 parámetros. En MPS, sus tiempos de pared fueron
+aproximadamente un 13–21 % superiores a los de concatenación, pero el registro no separa el coste
+del bloque de las variaciones de carga, entrada/salida y validación. Tampoco se conservaron medidas
+homogéneas de memoria y tiempo de inferencia para todas las configuraciones. Por ello, la ligereza
+paramétrica sí quedó cuantificada, mientras que la eficiencia computacional completa no.
 
-El análisis de las compuertas aporta información adicional. Los pesos generados por cada modelo
-variaron muy poco entre estudios y mantuvieron una entropía elevada, próxima al máximo correspondiente
-a cuatro modalidades. Por tanto, no se produjo una concentración sistemática en una única modalidad.
-La escasa variación entre entradas es compatible con que los descriptores globales empleados
-proporcionaran una señal limitada para condicionar la fusión. Esta observación, sin embargo, no
-demuestra por sí sola la causa del bajo rendimiento de algunas ejecuciones.
-
-Los bloques de fusión fueron ligeros en número de parámetros: añadieron entre 4 y 108 parámetros
-respecto a la Residual U-Net con concatenación. En las ejecuciones locales se observaron tiempos de
-pared superiores para las variantes ponderadas, aunque las diferencias de carga, entrada/salida y
-validación impiden atribuir ese incremento exclusivamente al bloque de fusión. Además, no se
-conservaron medidas homogéneas de memoria y tiempo de inferencia para todas las configuraciones. En
-consecuencia, puede afirmarse que las estrategias son ligeras desde el punto de vista paramétrico,
-pero no establecer una comparación completa de eficiencia computacional.
-
-La respuesta a la pregunta de investigación es, por tanto, negativa dentro de las configuraciones,
-el presupuesto y la partición utilizados: no se obtuvo evidencia de que la ponderación adaptativa
-ligera evaluada mejore de forma consistente la concatenación directa. Esta conclusión se limita al
-mecanismo implementado y al montaje experimental del trabajo, y no supone que cualquier forma de
-fusión adaptativa de modalidades deba producir el mismo resultado.
+La respuesta es negativa dentro de las configuraciones, las tres semillas, el presupuesto de
+15.000 pasos y la partición por estudio utilizados. No se extiende a mecanismos espaciales, fusiones
+intermedias ni otras señales de condicionamiento, y tampoco establece una tasa general de fallo de
+las compuertas.
 
 ## 6.2. Grado de cumplimiento de los objetivos
 
 El objetivo principal consistía en diseñar, implementar y evaluar un sistema reproducible que
 permitiera determinar si la ponderación adaptativa mejoraba la concatenación, considerando el
 rendimiento de segmentación y el coste computacional. Este objetivo se alcanzó en su finalidad
-experimental: el sistema fue construido, las estrategias se compararon y la pregunta de
-investigación pudo responderse. La caracterización del coste quedó limitada por la disponibilidad
-incompleta de medidas homogéneas de memoria y tiempo de inferencia.
+experimental; la dimensión computacional quedó parcialmente caracterizada. La correspondencia entre
+cada objetivo, su evidencia y su límite es la siguiente:
 
-Respecto a los objetivos específicos, el grado de cumplimiento fue el siguiente:
+1. **Flujo MONAI.** Los módulos de `tfm_brats/`, las configuraciones YAML y las particiones
+   versionadas documentan su implementación. Las dependencias del protocolo no quedaron congeladas
+   con versiones exactas.
+2. **Referencia residual.** `configs/model/residual_unet_3d.yaml` y tres ejecuciones finales
+   documentan el modelo común. La selección del punto de control utilizó ocho lotes de validación.
+3. **Fusión adaptativa.** Las configuraciones
+   `configs/model/residual_unet_3d_adaptive_gating.yaml` y
+   `configs/model/residual_unet_3d_adaptive_gating_meanstd.yaml` documentan las dos compuertas. Solo
+   se estudiaron pesos globales antes del codificador.
+4. **Ablación de fusión.** Doce entrenamientos, la Tabla 12 y
+   `outputs/evaluation/final_all_test.csv` registran la comparación. Tres semillas no permiten una
+   inferencia estadística sólida.
+5. **Segmentación y coste.** Las Tablas 13–14 recogen Dice y HD95, y la Tabla 15, parámetros y
+   tiempos. Faltan memoria y tiempo de inferencia homogéneos.
+6. **Contextualización.** La Tabla 13 incluye Attention U-Net, Swin-UNETR y nnU-Net. Las diferencias
+   de protocolo impiden tratar esa ordenación como una ablación arquitectónica.
 
-1. Se construyó un *pipeline* con MONAI que integra la carga y verificación de los volúmenes, la
-   transformación de etiquetas, la normalización, el aumento de datos, el entrenamiento, la
-   inferencia y la evaluación. Las configuraciones, semillas y particiones quedaron registradas para
-   permitir una reproducibilidad práctica del flujo experimental.
-
-2. Se implementó y entrenó una Residual U-Net 3D con concatenación directa de las cuatro modalidades,
-   utilizada como referencia común del estudio de fusión.
-
-3. Se diseñó e integró antes del codificador una compuerta adaptativa ligera, condicionada por
-   descriptores globales de la entrada. También se evaluó una extensión que incorpora la media y la
-   desviación típica por modalidad.
-
-4. Se completó una ablación controlada de cuatro estrategias de fusión sobre la misma Residual U-Net:
-   concatenación, ponderación global, compuerta adaptativa basada en la media y compuerta basada en
-   media y desviación típica. Estas configuraciones compartieron datos, arquitectura,
-   hiperparámetros, presupuesto de entrenamiento y protocolo de inferencia.
-
-5. La evaluación mediante Dice y HD95 para ET, TC y WT se completó para todas las configuraciones.
-   También se cuantificaron los parámetros y los tiempos disponibles. Este objetivo se cumplió
-   parcialmente en su dimensión computacional, porque no se dispuso de registros homogéneos de
-   memoria y tiempo de inferencia para toda la comparación.
-
-6. Los resultados se contextualizaron mediante Attention U-Net, Swin-UNETR y nnU-Net. Esta
-   contextualización permitió situar el rendimiento observado, aunque no constituye una ablación
-   causal de arquitecturas debido a las diferencias de entorno, inferencia y, en nnU-Net, de
-   preprocesamiento y entrenamiento.
-
-El signo negativo del resultado de la fusión adaptativa no implica el incumplimiento del objetivo
-principal. El propósito del trabajo era determinar empíricamente si se producía la mejora, no
-presuponerla.
-
-En la contextualización arquitectónica, la ordenación descriptiva de las medias observadas fue
-nnU-Net, con 0,829; Swin-UNETR, con 0,752 ± 0,017; Attention U-Net, con 0,735 ± 0,006; y la Residual
-U-Net con concatenación, con 0,706 ± 0,005. Dentro de la ablación residual, la ponderación global
-obtuvo 0,706 ± 0,006 y las compuertas adaptativas, afectadas por una corrida de bajo rendimiento cada
-una, 0,586 ± 0,169 y 0,592 ± 0,171. nnU-Net procede de una única corrida del *fold* 0 y de su propio
-*pipeline*.
-Swin-UNETR obtuvo el mayor promedio entre las configuraciones basadas en MONAI y superó a Attention
-U-Net en dos de las tres semillas, mientras que Attention U-Net presentó menor variabilidad. Esta
-ordenación no permite afirmar superioridad estadística ni atribuir las diferencias exclusivamente a
-la arquitectura.
-
-Tampoco se establece una comparación numérica directa con los resultados oficiales de BraTS-GLI
-2024, ya que el reto utiliza una evaluación oculta y métricas *lesion-wise*, mientras que este
-trabajo emplea una partición interna y convenciones propias para los casos vacíos.
+El resultado negativo de las compuertas no altera el cumplimiento experimental: el objetivo era
+comprobar la hipótesis, no presuponer su confirmación. Tampoco se comparan estas cifras directamente
+con la evaluación oficial de BraTS-GLI 2024, que utiliza datos ocultos y métricas *lesion-wise*
+distintas de las convenciones internas del trabajo.
 
 ## 6.3. Interpretación de la contribución
 
-La principal contribución del trabajo es una comparación controlada y reproducible de estrategias
-ligeras de fusión multimodal sobre una arquitectura común. Este diseño permite separar el efecto del
-mecanismo de fusión de las diferencias atribuibles a la red de segmentación.
+El trabajo aporta una ablación de cuatro reglas tempranas de fusión sobre una Residual U-Net común,
+con tres semillas por regla, y un diagnóstico exploratorio de las compuertas preliminares sobre 40
+estudios de validación. Las configuraciones, el evaluador común y las métricas agregadas permiten
+rastrear la comparación hasta las Tablas 12–15. El script `scripts/diagnose_adaptive_gating.py`
+permite repetir el procedimiento si se recuperan los datos y los puntos de control externos.
 
-La ponderación global aprendió coeficientes próximos a una distribución uniforme y no produjo una
-mejora consistente respecto a la concatenación. En las compuertas adaptativas, el diagnóstico
-realizado sobre estudios de validación mostró que los pesos variaban muy poco entre entradas y que
-no se concentraban de forma sistemática en una única modalidad. Este comportamiento sugiere que los
-descriptores globales empleados aportaron una señal limitada para adaptar la fusión a cada entrada,
-aunque no permite identificar por sí solo la causa de las corridas de bajo rendimiento.
+El diseño redujo las diferencias deliberadas de la ablación al bloque de fusión, de modo que sus
+resultados pueden interpretarse dentro de la variabilidad observada entre semillas. No garantiza un
+aislamiento causal perfecto: la optimización es estocástica y la selección del punto de control se
+apoyó en un subconjunto de validación.
 
-Desde una perspectiva práctica, la concatenación fue la alternativa más parsimoniosa del estudio,
-ya que no requirió parámetros adicionales y presentó, junto con la ponderación global, la menor
-variabilidad entre semillas. La evidencia obtenida no justifica añadir las compuertas evaluadas a
-esta Residual U-Net bajo el protocolo utilizado. Esta conclusión no debe extrapolarse a mecanismos
-de atención espacial, fusión de características intermedias o diseños adaptativos con señales de
-condicionamiento diferentes.
+El resultado negativo también es informativo. La ponderación global permaneció próxima a una
+distribución uniforme. En los 40 volúmenes completos del diagnóstico preliminar, las compuertas
+también mostraron poca variación entre estudios, aunque esa prueba no registró los pesos sobre los
+parches y ventanas empleados por el modelo final. En términos prácticos, la evidencia no justifica
+añadir estas compuertas a la Residual U-Net bajo el protocolo evaluado; la concatenación no añadió
+parámetros a la red base y, junto con la ponderación global, mostró la menor variabilidad.
 
-La comparación de arquitecturas desempeñó una función contextual. Las cifras describen el
-rendimiento obtenido por cada configuración, pero las diferencias de protocolo impiden atribuir la
-ordenación observada exclusivamente a la arquitectura. En particular, nnU-Net utilizó su propio
-proceso de planificación, preprocesamiento y entrenamiento, por lo que actúa como una referencia
-externa y no como parte de una ablación causal.
-
-Otra aportación es la infraestructura reproducible desarrollada para configurar experimentos,
-registrar métricas, generar predicciones y comparar resultados. Esta infraestructura facilita la
-extensión del estudio a nuevas estrategias de fusión y conserva la trazabilidad entre
-configuraciones, puntos de control y resultados.
+Attention U-Net, Swin-UNETR y nnU-Net sitúan numéricamente la ablación, pero no forman parte de esta
+ablación controlada porque difieren en entorno o protocolo. La infraestructura desarrollada
+conserva configuraciones, particiones y resultados ligeros y permite extender el mismo esquema
+experimental a otras reglas de fusión.
 
 ## 6.4. Limitaciones
 
-Las conclusiones deben interpretarse considerando las siguientes limitaciones:
+La limitación de mayor impacto afecta a la generalización por sujeto; las restantes acotan la
+precisión estadística, la comparabilidad y el alcance técnico:
 
-- **Dominio único.** El estudio se realizó exclusivamente sobre imágenes post-tratamiento de
-  BraTS-GLI 2024 con las cuatro modalidades disponibles. No se evaluó la generalización a otras
-  instituciones, protocolos de adquisición o dominios clínicos.
+- **Principal limitación: partición por estudio.** La partición no se agrupó por sujeto. Aunque los
+  identificadores completos de los estudios de test no aparecen en entrenamiento o validación, 205
+  de los 243 pertenecen a sujetos con otro estudio en alguna de esas particiones. La comparación
+  interna conserva valor porque todas las estrategias comparten el reparto, pero las métricas no
+  constituyen una estimación independiente de generalización a pacientes completamente nuevos.
 
-- **Partición por estudio.** La partición no se agrupó por sujeto. Aunque los identificadores
-  completos de los estudios de test no aparecen en entrenamiento o validación, 205 de los 243
-  estudios pertenecen a sujetos con otro estudio en alguna de esas particiones. Esta circunstancia
-  no invalida la comparación interna entre estrategias, ya que todas utilizaron la misma partición,
-  pero limita la interpretación de las métricas como estimación de la generalización a pacientes
-  completamente nuevos.
+- **Validez externa: dominio único.** Solo se utilizaron imágenes post-tratamiento de BraTS-GLI 2024
+  con las cuatro modalidades disponibles. No se midió la generalización a otras instituciones,
+  protocolos de adquisición o dominios clínicos.
 
-- **Número de repeticiones.** Las configuraciones basadas en MONAI se evaluaron con tres semillas.
-  Este número permite describir la variabilidad observada, pero no realizar estimaciones precisas ni
-  contrastes inferenciales sólidos. nnU-Net se evaluó mediante una única corrida del *fold* 0.
+- **Precisión estadística.** Las configuraciones MONAI se evaluaron con tres semillas. Este número
+  describe la variabilidad observada, pero no permite estimaciones precisas ni contrastes
+  inferenciales sólidos. nnU-Net se evaluó mediante una única ejecución del *fold* 0.
 
-- **Presupuesto y selección de puntos de control.** Las configuraciones MONAI utilizaron un
-  presupuesto de 15.000 pasos, elegido a partir de una sonda de la configuración de concatenación.
-  Este presupuesto no demuestra que cada configuración alcanzara individualmente su mejor punto de
-  convergencia. Además, sus puntos de control se seleccionaron mediante un subconjunto fijo de ocho
-  lotes de validación, lo que redujo el coste durante el entrenamiento, pero puede introducir ruido
-  en la elección del mejor modelo. nnU-Net utilizó 250 épocas y su propio protocolo.
+- **Presupuesto y selección de puntos de control.** Las configuraciones MONAI utilizaron 15.000
+  pasos, elegidos a partir de una sonda de concatenación. Ese presupuesto no demuestra que cada
+  configuración alcanzara individualmente su mejor punto de convergencia. Los puntos de control se
+  seleccionaron con un subconjunto fijo de ocho lotes de validación, lo que puede introducir ruido
+  en la elección. nnU-Net utilizó 250 épocas y su propio protocolo.
 
-- **Protocolo de evaluación.** La evaluación interna no reproduce exactamente las métricas
-  *lesion-wise* ni el protocolo oculto del reto oficial. En HD95, los promedios incluyen valores cero
-  cuando predicción y referencia están vacías y excluyen los infinitos cuando solo una lo está, por
-  lo que los denominadores finitos varían entre modelos y regiones.
+- **Comparación arquitectónica heterogénea.** Las variantes residuales se ejecutaron en MPS;
+  Attention U-Net y Swin-UNETR, en CUDA. También variaron el solapamiento de inferencia y, para
+  nnU-Net, el preprocesamiento y el entrenamiento. La comparación global es, por ello, descriptiva.
 
-- **Comparación arquitectónica heterogénea.** Las variantes residuales se ejecutaron en MPS,
-  Attention U-Net y Swin-UNETR en CUDA, se utilizaron diferentes solapamientos durante la inferencia
-  y nnU-Net empleó su propio preprocesamiento y protocolo de entrenamiento. Por ello, la comparación
-  global de arquitecturas es descriptiva.
+- **Protocolo de evaluación.** La evaluación interna no reproduce las métricas *lesion-wise* ni el
+  protocolo oculto del reto. En HD95 se incluyen ceros cuando predicción y referencia están vacías y
+  se excluyen infinitos cuando solo una lo está; los denominadores finitos varían entre modelos y
+  regiones.
 
-- **Caracterización computacional incompleta.** Aunque se dispone del número de parámetros y de
-  varios tiempos de entrenamiento, faltan mediciones homogéneas de memoria máxima y tiempo de
-  inferencia para todos los modelos.
+- **Caracterización computacional incompleta.** Se conservaron los parámetros y varios tiempos de
+  entrenamiento, pero no medidas homogéneas de memoria máxima y tiempo de inferencia para todos los
+  modelos.
 
-- **Alcance de la fusión.** Las estrategias estudiadas actúan únicamente antes del codificador y
-  generan pesos globales por modalidad. No se evaluaron mecanismos espaciales, fusiones en niveles
-  intermedios, interacciones entre modalidades ni estrategias específicas para modalidades ausentes
-  o degradadas.
+- **Trazabilidad parcial de artefactos.** Los puntos de control, los registros de entrenamiento y
+  parte de las métricas por estudio de las ejecuciones A100 no están versionados. Las métricas
+  agregadas permiten comprobar las tablas, pero no reconstruir todos los análisis desde un clon
+  limpio sin recuperar los artefactos externos.
+
+- **Alcance técnico de la fusión.** Las reglas actúan antes del codificador y generan pesos globales
+  por modalidad. No se evaluaron mecanismos espaciales, fusiones intermedias, interacciones entre
+  modalidades ni estrategias para modalidades ausentes o degradadas.
 
 ## 6.5. Líneas de trabajo futuro
 
-Una primera línea consiste en estudiar mecanismos de fusión aplicados a características
-intermedias. La atención cruzada entre modalidades o las compuertas con información espacial podrían
-capturar relaciones que los descriptores globales evaluados no representan. Estas alternativas
-deberían compararse manteniendo fija la red base y definiendo de antemano el protocolo de ablación.
+La prioridad debería ser repetir la ablación con una partición definida por sujeto desde el inicio y
+con más semillas. Esta decisión aborda primero la limitación de mayor impacto: comprobar si la
+ordenación observada se mantiene cuando cada paciente aparece en una sola partición. El subconjunto
+*post hoc* de 38 estudios no sustituye ese experimento, y un conjunto externo permitiría ampliarlo a
+otros centros o protocolos.
 
-También sería conveniente profundizar en la estabilidad de la optimización. Un estudio posterior
-podría ampliar el número de semillas, definir criterios previos para identificar corridas de bajo
-rendimiento y analizar conjuntamente las trayectorias de pérdida, los gradientes y la evolución de
-los pesos. Las variantes de *warmup*, tasa de aprendizaje específica, regularización de entropía y
-temperatura ya se estudiaron preliminarmente con 5.000 pasos; cualquier continuación de esa vía
-debería ampliar de forma explícita esa evidencia en lugar de presentar esas intervenciones como no
-exploradas.
+Una segunda prioridad, centrada en el mecanismo, sería instrumentar primero las compuertas para
+registrar los pesos sobre los parches de entrenamiento y las ventanas de inferencia. Después podría
+compararse una señal espacial o basada en características intermedias manteniendo fija la Residual
+U-Net. El protocolo debería definir de antemano las variantes, el criterio para identificar
+ejecuciones débiles y el análisis de pesos.
 
-La evaluación computacional podría completarse mediante un protocolo común que registre tiempo de
-entrenamiento e inferencia, memoria máxima, rendimiento por paso y consumo de recursos en el mismo
-hardware. Para la comparación arquitectónica también sería útil establecer criterios de parada o
-presupuestos adaptados a cada modelo, evitando interpretar un presupuesto fijo como garantía de
-convergencia equivalente.
+El estudio de estabilidad debería aumentar las semillas y analizar conjuntamente pérdidas,
+gradientes, métricas de validación y evolución de los pesos. Las variantes de *warmup*, tasa de
+aprendizaje específica, regularización de entropía y temperatura ya se exploraron con 5.000 pasos;
+una continuación tendría que ampliar esa evidencia en lugar de tratarlas como opciones no probadas.
 
-Si el alcance del trabajo se amplía hacia la generalización a pacientes nuevos, esta debería
-evaluarse mediante particiones definidas por sujeto desde el inicio del ciclo experimental y, cuando
-sea posible, mediante conjuntos externos. Esta ampliación respondería a una pregunta distinta de la
-ablación controlada realizada en el presente trabajo y permitiría medir de forma más rigurosa la
-capacidad de generalización.
+Después podría completarse la evaluación computacional en un hardware común, registrando tiempo de
+entrenamiento e inferencia, memoria máxima y rendimiento por paso. Quedan como extensiones
+posteriores las modalidades ausentes o degradadas, varios *folds* de nnU-Net y ablaciones del
+presupuesto, el parche y el lote, sin asumir que más cómputo eliminará las diferencias.
 
-Otras extensiones relevantes son la evaluación ante modalidades ausentes o degradadas y la
-repetición de nnU-Net con varios *folds* o ejecuciones para cuantificar su variabilidad. También
-podría estudiarse de forma controlada el efecto de ampliar el presupuesto de entrenamiento, el
-tamaño de parche o el lote, sin presuponer que el aumento de cómputo eliminará las diferencias
-observadas.
-
-En síntesis, el trabajo proporciona un *pipeline* reproducible y una evaluación controlada de varias
-estrategias ligeras de fusión multimodal. Bajo el montaje estudiado, las compuertas adaptativas no
-ofrecieron una mejora consistente frente a la concatenación y mostraron una variabilidad mayor entre
-las ejecuciones realizadas. La concatenación constituye, por tanto, la referencia más parsimoniosa
-para este experimento, mientras que el posible valor de mecanismos adaptativos más expresivos queda
-abierto para investigaciones posteriores.
+El aprendizaje central es que añadir un mecanismo condicionado por la entrada no garantiza una
+mejora: en este estudio se asoció con una mayor variabilidad observada entre las semillas
+ejecutadas, y la instrumentación disponible no permitió explicar la causa.

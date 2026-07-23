@@ -1,27 +1,20 @@
 # 1. Introducción
 
-El diagnóstico apoyado en técnicas de imagen médica constituye uno de los pilares de la práctica
-clínica moderna. Modalidades como la radiografía, la tomografía computarizada, la resonancia
-magnética o la tomografía por emisión de positrones permiten examinar de forma no invasiva la
-anatomía y determinadas propiedades fisiológicas o metabólicas de los tejidos. En oncología, estas
-técnicas intervienen en la detección y caracterización de lesiones, la planificación terapéutica,
-la evaluación de la respuesta al tratamiento y el seguimiento longitudinal. No obstante, sus
-resultados no deben interpretarse de forma aislada, sino integrarse con la información clínica,
-histopatológica y molecular del paciente.
+La segmentación tridimensional de gliomas mediante resonancia magnética (RM) combina T1n, T1c, T2w
+y FLAIR porque cada secuencia destaca componentes distintos de la
+lesión. La decisión estudiada en este trabajo no consiste solo en introducir las cuatro modalidades
+en una red, sino en determinar si una ponderación explícita y dependiente de la entrada mejora su
+combinación sin cambiar la arquitectura de segmentación ni aumentar sustancialmente su coste.
 
 ## 1.1. Contexto y motivación
 
-En particular, la imagen médica desempeña una función central en neuro-oncología, debido a la
-complejidad anatómica del sistema nervioso central, la heterogeneidad de los tumores cerebrales y la
-necesidad de preservar estructuras funcionales durante el tratamiento. Entre estos tumores, los
-gliomas constituyen un grupo heterogéneo con diferentes características biológicas, grados de
-agresividad y pronósticos. La resonancia magnética (MRI, por sus siglas en inglés) es la principal
-técnica de imagen empleada en su evaluación, ya que proporciona un elevado contraste entre tejidos
-blandos y aporta información relevante para la caracterización de la lesión, la planificación
-quirúrgica y radioterápica y el seguimiento de la enfermedad (Langen et al., 2017; Khalighi et al.,
-2024).
+La RM es la principal técnica de imagen empleada para evaluar gliomas. Su contraste entre tejidos
+blandos aporta información para caracterizar la lesión, planificar la cirugía y la radioterapia y
+seguir la evolución de la enfermedad. Estas funciones son especialmente relevantes ante la
+heterogeneidad biológica de los gliomas y la necesidad de preservar estructuras funcionales del
+sistema nervioso central durante el tratamiento (Langen et al., 2017; Khalighi et al., 2024).
 
-La evaluación de los gliomas mediante MRI tiene un carácter multiparamétrico. En segmentación
+La evaluación de los gliomas mediante RM tiene un carácter multiparamétrico. En segmentación
 automática se emplean habitualmente cuatro secuencias convencionales: T1 nativa (T1n), T1 con
 contraste (T1c), T2 ponderada (T2w) y recuperación de la inversión atenuada por fluido (FLAIR). La
 secuencia T1n proporciona una referencia anatómica de base, mientras que T1c permite identificar las
@@ -30,35 +23,32 @@ barrera hematoencefálica. Sin embargo, ese realce no representa por sí solo to
 tejido tumoral biológicamente activo. Las secuencias T2w y FLAIR son sensibles al aumento del
 contenido de agua. En particular, FLAIR suprime la señal del líquido cefalorraquídeo y facilita la
 visualización de alteraciones peritumorales que pueden incluir edema e infiltración. Ninguna
-modalidad describe por sí sola toda la lesión. Su combinación proporciona información complementaria
-para delimitar el tumor y sus subregiones (Langen et al., 2017; Kouli et al., 2022).
+modalidad describe por sí sola toda la lesión, por lo que se combinan para delimitar sus subregiones
+(Langen et al., 2017; Kouli et al., 2022). En este experimento, las regiones objetivo son el tumor
+realzante (ET), el núcleo tumoral (TC) y el tumor completo (WT), de acuerdo con la definición de
+BraTS-GLI 2024 (de Verdier et al., 2024).
 
 Cuando se requiere una cuantificación volumétrica, la delimitación manual de estas regiones por
 especialistas resulta compleja y costosa. Los límites difusos, la heterogeneidad de intensidades y
 la extensión tridimensional favorecen la variabilidad entre observadores e incluso entre anotaciones
 de un mismo profesional, además de consumir un tiempo considerable. La segmentación automática se
 plantea, por tanto, como herramienta de apoyo capaz de reducir la carga de trabajo y proporcionar
-estimaciones más consistentes. Aun así, el problema no está completamente resuelto, ya que el
-rendimiento disminuye en algunas subregiones y la generalización a imágenes de otros centros sigue
-siendo un reto (Kouli et al., 2022). Asimismo, unas métricas favorables no garantizan por sí solas la
-utilidad clínica de una segmentación, lo que hace necesaria su evaluación por especialistas (Hoebel
-et al., 2024).
+estimaciones más consistentes. Aun así, el problema no está resuelto: el rendimiento disminuye en
+algunas subregiones y la generalización a imágenes de otros centros continúa siendo un reto (Kouli
+et al., 2022). Además, unas métricas favorables no garantizan por sí solas la utilidad clínica, que
+requiere evaluación por especialistas (Hoebel et al., 2024).
 
-En los últimos años, el aprendizaje profundo ha ampliado sus aplicaciones en neuro-oncología
-(detección y clasificación de tumores, segmentación de lesiones, predicción de características
-moleculares y estimación del pronóstico), con estudios que respaldan su potencial como apoyo a la
-interpretación radiológica (Gao et al., 2022). Sin embargo, su incorporación a la práctica clínica
-exige modelos robustos ante variaciones en escáneres, protocolos y poblaciones, además de validación
-externa, interpretabilidad e integración en los flujos de trabajo (Khalighi et al., 2024).
+El aprendizaje profundo se ha aplicado al diagnóstico, la clasificación y la segmentación de
+tumores cerebrales (Gao et al., 2022; Kouli et al., 2022). Su incorporación a la práctica clínica
+exige robustez ante variaciones en escáneres, protocolos y poblaciones, validación externa,
+interpretabilidad e integración en los flujos de trabajo (Khalighi et al., 2024).
 
-Dentro de este contexto, el presente Trabajo de Fin de Máster se centra en la **segmentación
-automática tridimensional de gliomas a partir de imágenes MRI multimodales**. El sistema se aplica
-exclusivamente a pacientes previamente diagnosticados y no pretende realizar cribado, determinar la
-presencia de un tumor ni diferenciar los gliomas de otras patologías. La investigación estudia cómo
-combinar la información complementaria de las secuencias T1n, T1c, T2w y FLAIR. Concretamente,
-analiza **si un mecanismo de fusión adaptativa mejora la delimitación de las subregiones tumorales
-frente a la concatenación convencional de modalidades**, manteniendo un coste computacional
-asumible.
+El trabajo compara cuatro reglas de fusión temprana de T1n, T1c, T2w y FLAIR. La variable
+experimental principal es el bloque que precede al codificador; la Residual U-Net 3D, los datos y el
+entrenamiento se mantienen fijos. Se analiza así **si un mecanismo de fusión adaptativa mejora la
+delimitación de ET, TC y WT frente a la concatenación convencional**, con un coste computacional
+asumible. El alcance se restringe a la segmentación de pacientes previamente diagnosticados: no se
+abordan el cribado, la detección del tumor ni el diagnóstico diferencial.
 
 ## 1.2. Planteamiento del problema
 
@@ -70,15 +60,14 @@ Estudios recientes muestran, por ejemplo, una mayor relevancia de FLAIR para del
 hiperintensa peritumoral y de T1c para identificar tejido realzante, aunque la combinación de
 modalidades suele proporcionar resultados más robustos (Ruffle et al., 2023). Esta complementariedad
 es la base del enfoque multimodal de BraTS-GLI 2024, conjunto empleado en este trabajo, que
-proporciona MRI multiparamétrica y anotaciones expertas para evaluar algoritmos de segmentación
+proporciona RM multiparamétrica y anotaciones expertas para evaluar algoritmos de segmentación
 (de Verdier et al., 2024).
 
 Una estrategia habitual para integrar estas secuencias consiste en alinearlas y concatenarlas como
-canales de un único tensor de entrada. Esta fusión temprana es sencilla, introduce un coste
-computacional mínimo y permite que las primeras capas convolucionales aprendan filtros distintos por
-canal. Por tanto, no es correcto afirmar que asigne necesariamente el mismo peso a todas las
-modalidades. Su limitación es que no incorpora un mecanismo explícito que estime y reajuste la
-contribución relativa de cada modalidad en función del contenido de la entrada, sino que dicha
+canales de un único tensor de entrada. Esta fusión temprana es sencilla y añade un coste
+computacional mínimo. La concatenación no impone pesos iguales a las modalidades: la primera
+convolución puede aprender filtros distintos para cada canal. Lo que no ofrece es un coeficiente
+separado y observable que reajuste la contribución de cada modalidad para cada entrada; esa
 contribución queda representada de forma implícita en los filtros aprendidos.
 
 La literatura ha explorado mecanismos de fusión más elaborados para aprovechar las relaciones entre
@@ -90,19 +79,21 @@ por una integración adaptativa, aunque sus arquitecturas son más complejas y n
 que cualquier mecanismo de atención supere necesariamente a la concatenación (Liu et al., 2022; Zhou
 et al., 2022).
 
-La problemática central de este TFM consiste, por tanto, en **determinar si una ponderación explícita
-y ligera de las modalidades aporta una mejora medible cuando se mantiene fija la arquitectura de
-segmentación**. Para aislar esta variable se utiliza la misma Residual U-Net 3D y el mismo protocolo
-de entrenamiento en cuatro configuraciones: concatenación directa, ponderación global estática,
-compuerta adaptativa basada en la media y una extensión condicionada por la media y la desviación
-típica de cada modalidad. La ponderación global aprende un coeficiente por modalidad compartido por
-todas las entradas, mientras que las compuertas adaptativas generan los coeficientes a partir del
-tensor tridimensional procesado. Esos coeficientes se aplican antes del codificador y permanecen
-constantes en el espacio dentro de cada parche o ventana de inferencia. Por tanto, el mecanismo es
-dependiente de la entrada, pero no constituye una atención espacial ni específica por subregión. La
-inclusión de la ponderación global permite distinguir dos posibilidades: que baste con aprender una
-jerarquía general entre modalidades o que resulte beneficioso adaptar dicha ponderación al contenido
-de cada muestra.
+La pregunta central consiste en **determinar si una ponderación explícita y ligera de las
+modalidades aporta una mejora medible cuando se mantiene fija la arquitectura de segmentación**.
+Para reducir las variables de comparación se utiliza la misma Residual U-Net 3D y el mismo protocolo
+de entrenamiento en cuatro configuraciones: concatenación directa, ponderación global aprendida e
+independiente de la entrada, compuerta adaptativa basada en la media y una extensión condicionada
+por la media y la desviación típica de cada modalidad.
+
+La ponderación global aprende un coeficiente por modalidad compartido por todas las entradas. Las
+compuertas adaptativas, en cambio, generan esos coeficientes a partir del tensor tridimensional
+procesado. Los pesos se aplican antes del codificador y permanecen constantes en el espacio dentro
+de cada parche o ventana de inferencia; el mecanismo depende de la entrada, pero no constituye
+atención espacial ni específica por subregión.
+
+La ponderación global se incluyó como comparador intermedio para separar dos hipótesis: si basta con
+aprender una jerarquía común entre modalidades o si conviene adaptarla al contenido de cada entrada.
 
 A partir de este planteamiento, la pregunta de investigación se formula así:
 
@@ -137,7 +128,7 @@ segmentación como el coste computacional.
 
 **Objetivos específicos:**
 
-1. Construir un *pipeline* reproducible con MONAI para cargar los volúmenes MRI multimodales,
+1. Construir un *pipeline* reproducible con MONAI para cargar los volúmenes de RM multimodales,
    transformar las etiquetas en las regiones objetivo, normalizar las intensidades por modalidad y
    aplicar aumento de datos durante el entrenamiento.
 2. Implementar y entrenar una Residual U-Net 3D que reciba las cuatro modalidades concatenadas como
@@ -145,40 +136,19 @@ segmentación como el coste computacional.
 3. Diseñar e integrar, antes del codificador, una compuerta adaptativa ligera que estime un peso por
    modalidad en función del contenido de la entrada y lo aplique a los canales.
 4. Realizar un estudio de ablación controlado que compare concatenación directa, ponderación global
-   estática y dos variantes de ponderación adaptativa —basadas en la media y en
-   media+desviación—, manteniendo constantes la arquitectura base, las particiones y el protocolo de
-   entrenamiento.
+   aprendida e independiente de la entrada y dos variantes adaptativas —una basada en la media y
+   otra en la media y la desviación típica—, manteniendo constantes la arquitectura base, las
+   particiones y el protocolo de entrenamiento.
 5. Evaluar las variantes de fusión mediante Dice y HD95 para ET, TC y WT, y analizar su huella
    computacional a partir del número de parámetros y de los registros disponibles de tiempo y
    memoria.
 6. Contextualizar los resultados comparándolos con arquitecturas de referencia de mayor complejidad
-   (Attention U-Net y Swin-UNETR) y con el *baseline* externo nnU-Net.
-
-El trabajo persigue **responder** la pregunta de investigación, sea la respuesta afirmativa o
-negativa.
+   (Attention U-Net y Swin-UNETR) y con la referencia externa nnU-Net.
 
 ## 1.4. Organización del documento
 
-La memoria se estructura en seis capítulos que avanzan desde la contextualización del problema hasta
-la evaluación experimental de la solución.
-
-- **Capítulo 1, Introducción.** Presenta el papel de la imagen médica y la inteligencia artificial en
-  neuro-oncología, delimita el problema, formula la pregunta de investigación y fija los objetivos.
-- **Capítulo 2, Marco teórico y estado del arte.** Desarrolla los fundamentos de la segmentación 3D
-  de imagen médica, las arquitecturas U-Net y sus variantes, los mecanismos de atención, los modelos
-  basados en Transformers y las estrategias de fusión multimodal. Presenta el *benchmark* BraTS y
-  formaliza las métricas Dice y HD95.
-- **Capítulo 3, Metodología.** Expone las fases de alto nivel del trabajo (familiarización, análisis y
-  preparación de datos, diseño e implementación, experimentación y evaluación), centrándose en el
-  proceso y dejando el detalle técnico para el capítulo siguiente.
-- **Capítulo 4, Desarrollo.** Describe la materialización técnica de cada fase, incluida la
-  organización del repositorio, el *pipeline* MONAI, las arquitecturas, los mecanismos de fusión, la
-  configuración del entrenamiento, la inferencia por ventana deslizante y las medidas de
-  reproducibilidad.
-- **Capítulo 5, Resultados.** Compara las estrategias de fusión y las arquitecturas mediante Dice y
-  HD95 por región sobre el conjunto de test, y examina el coste computacional.
-- **Capítulo 6, Conclusiones.** Sintetiza los hallazgos, responde a la pregunta de investigación,
-  valora el cumplimiento de los objetivos y expone limitaciones y líneas de trabajo futuro.
-
-Tras estos capítulos se incluyen la relación completa de referencias bibliográficas y un apéndice de
+Los capítulos 1 y 2 delimitan la pregunta de investigación y sus fundamentos. Los capítulos 3 y 4
+separan el proceso metodológico de su implementación en el sistema MONAI y en la ruta externa de
+nnU-Net. Los capítulos 5 y 6 presentan los resultados, responden a la pregunta y exponen sus
+limitaciones. La memoria se completa con las referencias bibliográficas y un apéndice de
 reproducibilidad.

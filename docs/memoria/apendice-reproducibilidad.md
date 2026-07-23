@@ -9,19 +9,34 @@ permite reconstruir los entrenamientos pesados sin disponer de los datos y del e
 - Repositorio remoto configurado:
   [https://github.com/jesusferron/tfm-brain-tumor-segmentation](https://github.com/jesusferron/tfm-brain-tumor-segmentation).
 - Rama de trabajo: `main`.
+- SHA de referencia al iniciar esta revisión:
+  `89c778d211264fab2ae835f60b10347e677783c9`.
 
-La versión disponible en la rama principal puede obtenerse con:
+El SHA anterior precede a las correcciones editoriales de la entrega y **debe sustituirse por el SHA
+del commit final** después de integrarlas. La reproducción no debe depender de la posición móvil de
+`main`. Una vez congelada la entrega, el marcador `<SHA_FINAL>` de los siguientes comandos debe
+reemplazarse por ese identificador completo. Esta es la única actualización documental que no puede
+cerrarse antes de aceptar las correcciones y crear el commit que las contenga:
 
 ```bash
 git clone https://github.com/jesusferron/tfm-brain-tumor-segmentation.git
 cd tfm-brain-tumor-segmentation
-git checkout main
+git checkout <SHA_FINAL>
+test "$(git rev-parse HEAD)" = "<SHA_FINAL>"
 ```
 
 ## A.2. Entorno
 
 Las dependencias del *pipeline* MONAI se recogen en `requirements/protocol.txt` y las de nnU-Net en
-`requirements/nnunet.txt`. Una instalación local básica se prepara mediante:
+`requirements/nnunet.txt`. El 23 de julio de 2026, el entorno local disponible durante la revisión
+reportó Python 3.13.2, PyTorch 2.12.0 y MONAI 1.5.2; nnU-Net sí está fijado como
+`nnunetv2==2.7.0`. Los resúmenes de las ejecuciones finales no guardaron una instantánea de paquetes
+y `requirements/protocol.txt` no fija versiones, por lo que las tres primeras cifras documentan el
+entorno reconstruido, no demuestran la versión efectiva de cada ejecución local o A100. Esta
+carencia impide una reconstrucción binaria exacta y debe conservarse como límite de
+reproducibilidad.
+
+Una instalación local básica se prepara mediante:
 
 ```bash
 python3 -m venv .venv
@@ -61,7 +76,7 @@ no constituye una separación independiente por sujeto.
 
 ## A.4. Entrenamiento, inferencia y evaluación MONAI
 
-La siguiente ejecución reproduce la estructura de una corrida final de la Residual U-Net con
+El siguiente comando reproduce la estructura de una ejecución final de la Residual U-Net con
 concatenación. Para las demás variantes se sustituyen la configuración del modelo, el directorio de
 salida y la semilla.
 
@@ -85,9 +100,9 @@ Las configuraciones principales de la ablación son:
 
 Attention U-Net y Swin-UNETR emplean, respectivamente,
 `configs/model/attention_unet_3d.yaml` y `configs/model/swin_unetr.yaml`, junto con
-`configs/training/colab_a100_final.yaml` en las corridas A100.
+`configs/training/colab_a100_final.yaml` en las ejecuciones A100.
 
-La inferencia y la evaluación de una corrida se ejecutan con:
+La inferencia y la evaluación de una ejecución se realizan con:
 
 ```bash
 .venv/bin/python -m tfm_brats.cli predict \
@@ -109,7 +124,7 @@ La inferencia y la evaluación de una corrida se ejecutan con:
 ## A.5. Ruta externa nnU-Net
 
 nnU-Net se ejecuta como un *pipeline* externo, con planificación, preprocesamiento, aumentos y
-entrenamiento propios. Para reproducir la corrida final deben definirse primero sus tres directorios
+entrenamiento propios. Para reproducir la ejecución final deben definirse primero sus tres directorios
 de trabajo en disco local:
 
 ```bash
@@ -157,7 +172,13 @@ común sobre los 243 estudios de test de la que procede el Dice medio 0,829.
 
 ## A.6. Verificación y figuras
 
-Las comprobaciones locales del código y la regeneración de las figuras se realizan mediante:
+Durante esta revisión se comprobó que las rutas relativas citadas en este apéndice existen en el
+árbol de trabajo, `compileall` terminó sin errores y las 17 pruebas unitarias finalizaron
+correctamente. Las rutas bajo `/content` son destinos del entorno Colab y no se comprobaron como
+rutas locales. Estas verificaciones se ejecutaron en el entorno existente, no desde un clon limpio
+del commit final, porque ese commit todavía no estaba congelado. Por tanto, los siguientes comandos
+constituyen también la lista que debe repetirse después de sustituir `<SHA_FINAL>` en el Apartado
+A.1:
 
 ```bash
 .venv/bin/python -m compileall -q tfm_brats scripts tests
@@ -167,7 +188,9 @@ Las comprobaciones locales del código y la regeneración de las figuras se real
 ```
 
 `scripts/make_figures.py` requiere que las predicciones NIfTI utilizadas por las comparaciones
-cualitativas estén disponibles en las rutas esperadas bajo `outputs/predictions/`.
+cualitativas estén disponibles en las rutas esperadas bajo `outputs/predictions/`. Esas predicciones
+no están versionadas, de modo que las figuras no pueden regenerarse a partir de un clon limpio sin
+recuperar antes los artefactos externos.
 
 ## A.7. Artefactos y política de versionado
 
@@ -181,15 +204,15 @@ distribuirse en el repositorio por tamaño o por las condiciones de acceso a los
 | Código y pruebas | `tfm_brats/`, `scripts/`, `tests/` | Versionado |
 | Configuraciones | `configs/dataset/`, `configs/model/`, `configs/training/`, `configs/nnunet/` | Versionado |
 | Trazabilidad de datos | Resúmenes de QC y particiones bajo `outputs/qc/` y `outputs/splits/` | Versionado |
-| Resultados ligeros | CSV y JSON de métricas bajo `outputs/evaluation/` | Versionado |
+| Resultados ligeros | Agregados CSV/JSON y métricas por estudio conservadas bajo `outputs/evaluation/` | Versionado parcial; faltan los CSV por estudio de Attention U-Net y Swin-UNETR |
 | Memoria y figuras | `docs/memoria/` y scripts generadores | Versionado |
 | Datos médicos | Volúmenes NIfTI originales y derivados | No versionado |
 | Salidas pesadas | Predicciones NIfTI, *checkpoints*, directorios `outputs/train/` y artefactos internos de nnU-Net | No versionado |
-| Registros externos | Artefactos completos de las corridas A100 y nnU-Net conservados fuera del repositorio | No versionado; su ubicación depende del entorno del autor |
+| Registros externos | Artefactos completos de las ejecuciones A100 y nnU-Net conservados fuera del repositorio | No versionado; su ubicación depende del entorno del autor |
 
-La tabla muestra que el repositorio conserva el código, las configuraciones y las métricas ligeras,
-pero no constituye por sí solo un paquete autocontenido de reproducción: los datos protegidos y las
-salidas pesadas deben obtenerse o conservarse por separado.
+El repositorio conserva el código, las configuraciones y los agregados principales, pero no
+constituye por sí solo un paquete autocontenido de reproducción: los datos protegidos, las salidas
+pesadas, parte de los registros y seis CSV por estudio deben recuperarse o conservarse por separado.
 
 El fichero `.gitignore` excluye explícitamente los NIfTI, *checkpoints*, predicciones, entornos
 virtuales y directorios generados por nnU-Net.

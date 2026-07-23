@@ -1,18 +1,16 @@
 # 5. Resultados
 
-Este capítulo presenta los resultados obtenidos con las configuraciones experimentales descritas en
-el Capítulo 4. El análisis se centra en determinar si las estrategias explícitas de ponderación
-multimodal mejoran la concatenación directa cuando se mantiene fija la Residual U-Net 3D. A
-continuación, los resultados se contextualizan mediante Attention U-Net, Swin-UNETR y la referencia
-externa nnU-Net. El capítulo concluye con el análisis de la huella computacional y dos comparaciones
-cualitativas.
+La pregunta principal se evaluó mediante doce entrenamientos residuales: cuatro estrategias de
+fusión y tres semillas por estrategia. Attention U-Net, Swin-UNETR y nnU-Net aportan referencias
+contextuales, mientras que los registros de coste y dos ejemplos visuales completan la descripción
+de los resultados.
 
 ## 5.1. Alcance del análisis y protocolo de reporte
 
 Las métricas se calcularon sobre la partición denominada `test`, formada por 243 estudios de imagen
 cuyos identificadores completos no aparecen en las particiones de entrenamiento o validación. Las
 configuraciones basadas en MONAI se entrenaron con las semillas 20260526, 20260527 y 20260528. Para
-ellas se presenta la media y la desviación estándar poblacional de las tres corridas. nnU-Net se
+ellas se presenta la media y la desviación estándar poblacional de las tres ejecuciones. nnU-Net se
 entrenó una sola vez con la configuración `3d_fullres` y el *fold* 0, por lo que sus resultados no
 incluyen una estimación de variabilidad entre repeticiones.
 
@@ -33,12 +31,11 @@ descriptiva, puesto que se utilizaron entornos de ejecución y valores de solapa
 diferentes. nnU-Net empleó además su propio proceso de planificación, preprocesamiento y
 entrenamiento.
 
-Las métricas utilizadas son Dice y HD95 para ET, TC y WT. En Dice, los valores más altos indican
-mayor solapamiento. En HD95, los valores más bajos indican menor discrepancia entre las superficies.
-La implementación asigna HD95 igual a cero cuando predicción y referencia están ambas vacías e
-infinito cuando únicamente una de ellas lo está. Los valores infinitos se excluyen posteriormente
-del promedio, mientras que los ceros se conservan. En consecuencia, HD95 debe interpretarse junto
-con el número de estudios que presentan un valor finito.
+Las métricas utilizadas son Dice y HD95 para ET, TC y WT: en Dice es preferible un valor alto y en
+HD95, uno bajo. Como se detalló en el Apartado 4.5.2, HD95 vale cero cuando predicción y referencia
+están vacías e infinito cuando solo una de ellas lo está; los infinitos se excluyen del promedio y
+los ceros se conservan. Por ello, cada media de HD95 se acompaña del número de estudios con valor
+finito.
 
 Los resultados se analizan descriptivamente. No se realizaron contrastes de hipótesis ni se
 definieron márgenes de equivalencia. Asimismo, el presupuesto de 15.000 pasos se fijó a partir de la
@@ -48,13 +45,13 @@ alcanzaran individualmente la convergencia ni para demostrar ausencia de sobreaj
 ## 5.2. Estudio de ablación de las estrategias de fusión
 
 La comparación principal incluye cuatro configuraciones construidas sobre la misma Residual U-Net
-3D: concatenación directa, ponderación global estática, compuerta adaptativa basada en la media y
-compuerta adaptativa basada en la media y la desviación típica. La Tabla 12 presenta el Dice medio
-obtenido por cada semilla.
+3D: concatenación directa, ponderación global aprendida e independiente de la entrada, compuerta
+adaptativa basada en la media y compuerta adaptativa basada en la media y la desviación típica. La
+Tabla 12 presenta el Dice medio obtenido por cada semilla.
 
 **Tabla 12.** Dice medio por semilla para las estrategias de fusión evaluadas sobre la misma
 Residual U-Net 3D. La última columna muestra la media y la desviación estándar poblacional de las
-tres corridas.
+tres ejecuciones.
 
 | Estrategia de fusión | Semilla 26 | Semilla 27 | Semilla 28 | Media ± desv. |
 | :-- | :-: | :-: | :-: | :-: |
@@ -65,43 +62,57 @@ tres corridas.
 
 La concatenación y la ponderación global producen agregados prácticamente coincidentes. La
 diferencia media entre ambas es inferior a 0,001 y cambia de signo entre semillas, por lo que no se
-observa una mejora consistente asociada a la ponderación estática. Los pesos aprendidos por
+observa una mejora consistente asociada a la ponderación independiente de la entrada. Los pesos
+aprendidos por
 `global_weighted` permanecieron, además, próximos a la distribución uniforme: entre 0,244 y 0,254
 para las cuatro modalidades y las tres semillas. En este experimento, el bloque no desarrolló una
 preferencia marcada por ninguna modalidad.
 
-Las variantes adaptativas presentan un comportamiento diferente. Dos corridas de cada variante
+Las variantes adaptativas presentan un comportamiento diferente. Dos ejecuciones de cada variante
 alcanzan valores próximos a los de concatenación y ponderación global, entre 0,702 y 0,714. Sin
-embargo, `adaptive_gating` obtiene 0,347 con la semilla 20260528 y la variante media+desviación
-obtiene 0,349 con la semilla 20260527. Estas dos ejecuciones se denominan corridas de bajo
-rendimiento porque se separan claramente de las otras repeticiones de su configuración. Su
-presencia reduce el promedio y eleva la dispersión de las variantes adaptativas.
+embargo, `adaptive_gating` obtiene 0,347 con la semilla 20260528 y la variante basada en la media y
+la desviación típica obtiene 0,349 con la semilla 20260527. En adelante se describen como
+ejecuciones de bajo rendimiento porque se separan claramente de las otras repeticiones de su
+configuración. Su presencia reduce el promedio y eleva la dispersión de las variantes adaptativas.
 
-La observación de una corrida de bajo rendimiento entre tres repeticiones no permite estimar una
+Los registros de entrenamiento permiten acotar la anomalía, aunque no explicarla. En el subconjunto
+fijo de validación, las ejecuciones
+`outputs/train/final_adaptive_gating_seed20260528/train_log.csv` y
+`outputs/train/final_adaptive_gating_meanstd_seed20260527/train_log.csv` presentaron un Dice bajo
+desde la primera comprobación y nunca se aproximaron a las otras repeticiones: sus máximos fueron
+0,339 y 0,321, frente al intervalo 0,673–0,690 de las cuatro ejecuciones restantes. Sus valores
+finales fueron 0,307 y 0,321. Por tanto, el resultado no se reduce a un deterioro tardío ni a la
+selección de un único punto de control. Estos registros estaban disponibles en el entorno de
+trabajo, pero `outputs/train/` no está versionado; una auditoría desde un clon limpio requiere
+recuperarlos de los artefactos externos.
+
+La observación de una ejecución de bajo rendimiento entre tres repeticiones no permite estimar una
 probabilidad general de fallo ni determinar su causa. Sí muestra que las variantes adaptativas
 presentaron mayor variabilidad entre las semillas ejecutadas que la concatenación y la ponderación
 global dentro del presupuesto evaluado.
 
-El análisis de los pesos aporta información adicional. En los tres *checkpoints* finales de la
-compuerta basada solo en la media, la desviación entre 40 estudios de validación fue prácticamente
-nula. En la variante media+desviación, la máxima desviación por modalidad fue aproximadamente
-0,0011. Por tanto, los pesos cambiaron muy poco entre estudios y el comportamiento efectivo de cada
-*checkpoint* fue próximo al de una ponderación estática.
+El artefacto versionado `outputs/evaluation/adaptive_gating_explore_diagnosis.txt` aporta un
+diagnóstico exploratorio, no una medición de los puntos de control finales. En cuatro ejecuciones
+preliminares de 5.000 pasos, `scripts/diagnose_adaptive_gating.py` aplicó la compuerta una vez a cada
+uno de 40 volúmenes completos normalizados. Las desviaciones por modalidad se redondearon a 0,000 en
+la variante basada en la media y a 0,000–0,001 en las variantes basadas en la media y la desviación
+típica. Las entropías medias fueron 1,355–1,381, próximas al máximo de ln(4) = 1,386, y ningún peso
+medio superó 0,331.
 
-No se observó, sin embargo, una concentración de la compuerta en una única modalidad. Las entropías
-medias se situaron entre 1,353 y 1,380, próximas al máximo de ln(4) = 1,386, y ningún peso medio
-superó 0,345. Las corridas de bajo Dice deben interpretarse, por tanto, como un deterioro del
-rendimiento global durante la optimización, no como un colapso de la compuerta sobre una modalidad
-concreta. La escasa variación de los pesos sugiere que los descriptores globales utilizados
-aportaron una señal limitada para adaptar la fusión a cada entrada, aunque este diagnóstico no
-demuestra por sí solo la causa del rendimiento observado.
+En esas exploraciones no se observó una concentración extrema en una única modalidad. Sin embargo,
+el modelo recibe parches durante el entrenamiento y ventanas deslizantes durante la inferencia, y
+calcula los pesos sobre cada tensor recibido. El diagnóstico no caracteriza esa variación operativa
+ni permite extrapolar su resultado a los puntos de control finales o relacionarlo causalmente con
+las ejecuciones débiles. Repetirlo requiere además los datos y los puntos de control no versionados;
+para resolver esta limitación habría que registrar los pesos durante el entrenamiento y la
+inferencia y conservar un resumen reproducible.
 
 Como comprobación de sensibilidad, se repitió el agregado sobre los 38 estudios correspondientes a
 29 sujetos que no aparecen ni en entrenamiento ni en validación. En este subconjunto *post hoc*, la
 concatenación obtuvo 0,751 ± 0,003; la ponderación global, 0,750 ± 0,006; la compuerta adaptativa,
-0,617 ± 0,192; y la variante media+desviación, 0,620 ± 0,194. La ordenación se mantiene y respalda
-la interpretación principal de la ablación. El reducido tamaño del subconjunto impide utilizarlo
-como sustituto de una evaluación independiente más amplia.
+0,617 ± 0,192; y la variante basada en la media y la desviación típica, 0,620 ± 0,194. La ordenación
+descriptiva no cambia en este subconjunto, aunque su carácter *post hoc* y su reducido tamaño
+impiden tratarlo como una estimación independiente de generalización.
 
 En conjunto, los experimentos no aportan evidencia de que las estrategias adaptativas evaluadas
 mejoren de forma consistente la concatenación directa. Dentro de este montaje, la concatenación fue
@@ -110,9 +121,9 @@ variabilidad entre semillas.
 
 ## 5.3. Comparación descriptiva de arquitecturas
 
-La Tabla 13 amplía el análisis con Attention U-Net, Swin-UNETR y nnU-Net. La tabla muestra el Dice
-por región y la media de ET, TC y WT. Los valores de las configuraciones MONAI corresponden a tres
-semillas; nnU-Net procede de una única corrida de referencia.
+La Tabla 13 amplía el análisis con Attention U-Net, Swin-UNETR y nnU-Net y presenta el Dice por
+región y la media de ET, TC y WT. Los valores de las configuraciones MONAI corresponden a tres
+semillas; nnU-Net procede de una única ejecución de referencia.
 
 **Tabla 13.** Coeficiente Dice en la partición de evaluación. Para las configuraciones con tres
 semillas se presenta media ± desviación estándar poblacional.
@@ -128,10 +139,15 @@ semillas se presenta media ± desviación estándar poblacional.
 | Residual U-Net + compuerta media+desv. | 3 | 0,592 ± 0,171 | 0,419 ± 0,211 | 0,591 ± 0,209 | 0,765 ± 0,095 |
 
 nnU-Net alcanza el mayor Dice medio observado, con 0,829. Este resultado se utiliza como referencia
-contextual fuerte, no como una ablación controlada de arquitectura. nnU-Net empleó su propio
+contextual, no como una ablación controlada de arquitectura. nnU-Net empleó su propio
 preprocesamiento, aumento de datos, función de pérdida, optimizador y planificación, además de un
-*checkpoint* seleccionado mediante su *fold* interno. Solo se ejecutó una corrida, por lo que
+*checkpoint* seleccionado mediante su *fold* interno. Solo se ejecutó una vez, por lo que
 tampoco es posible estimar su variabilidad entre semillas.
+
+La diferencia respecto a las configuraciones MONAI indica que el margen observado no se agota en
+añadir una regla ligera de fusión temprana. Sin embargo, este diseño no permite decidir qué parte
+del proceso auto-configurado de nnU-Net explica esa diferencia ni separar su contribución de la del
+presupuesto y la selección del punto de control.
 
 Swin-UNETR alcanza el mayor Dice medio entre las configuraciones MONAI, con 0,752 ± 0,017, seguido
 de Attention U-Net con 0,735 ± 0,006. Ambos modelos compartieron el protocolo A100, lo que permite
@@ -142,10 +158,10 @@ ordenación, pero no establecer una superioridad estadística.
 
 La principal diferencia regional entre ambos modelos aparece en el Dice agregado de ET: 0,624 para
 Swin-UNETR y 0,572 para Attention U-Net. ET está presente en 182 de los 243 estudios y ausente en
-los 61 restantes. Al restringir el cálculo a los estudios con ET presente, los resultados se
-aproximan: alrededor de 0,735 para Swin-UNETR y 0,731 para Attention U-Net. Por tanto, una parte
-importante de la diferencia agregada procede de la detección correcta de la ausencia de ET y no
-exclusivamente de una mayor precisión del contorno cuando la región está presente.
+los 61 restantes. Como la evaluación asigna Dice = 1 cuando predicción y referencia están vacías,
+este agregado combina la delineación en estudios con ET y la detección de su ausencia. Los
+artefactos versionados no incluyen los seis CSV por estudio de estas dos arquitecturas y, por tanto,
+no permiten descomponer aquí ambas contribuciones.
 
 La comparación global con las Residual U-Net debe mantenerse en el plano contextual. Aunque los
 modelos MONAI compartieron el mismo presupuesto de entrenamiento, las configuraciones ejecutadas
@@ -154,8 +170,8 @@ La tabla permite describir los resultados obtenidos por cada configuración, per
 la diferencia observada exclusivamente a la arquitectura.
 
 La Tabla 14 muestra HD95. Para las configuraciones con tres semillas, cada celda contiene la media
-y la desviación estándar de los tres promedios por corrida. Entre corchetes se indica el intervalo
-del número de estudios con HD95 finito. En nnU-Net se presenta el denominador de su única corrida.
+y la desviación estándar de los tres promedios por ejecución. Entre corchetes se indica el intervalo
+del número de estudios con HD95 finito. En nnU-Net se presenta el denominador de su única ejecución.
 
 **Tabla 14.** HD95 en milímetros y número de estudios con valor finito. Un valor menor indica menor
 discrepancia de superficie entre los casos incluidos en el promedio.
@@ -173,12 +189,10 @@ discrepancia de superficie entre los casos incluidos en el promedio.
 La ordenación descriptiva de HD95 es compatible, en términos generales, con la observada en Dice.
 nnU-Net presenta los valores más bajos y Swin-UNETR los menores entre las configuraciones MONAI.
 Las variantes adaptativas muestran medias y desviaciones mayores debido principalmente a sus
-corridas de bajo rendimiento.
+ejecuciones de bajo rendimiento.
 
-Estos valores no deben interpretarse de forma aislada. El promedio incluye los casos en los que
-predicción y referencia están ambas vacías, con HD95 igual a cero, pero excluye los casos en los que
-solo una de ellas está vacía. Por esta razón, una cifra inferior puede depender tanto de la precisión
-de las superficies como de los casos que han quedado fuera del agregado.
+Como los infinitos se excluyen, una media menor puede reflejar tanto superficies más próximas como
+un conjunto distinto de casos finitos; por eso la Tabla 14 reporta también su número.
 
 ## 5.4. Huella computacional
 
@@ -190,7 +204,7 @@ emplean para establecer una ordenación general de eficiencia entre arquitectura
 **Tabla 15.** Parámetros, entorno y coste registrado. «No registrado» indica que el artefacto
 necesario no se conservó o que el mecanismo de registro no era compatible con el entorno.
 
-| Modelo o configuración | Parámetros | Incremento | Entorno | Tiempo por corrida | Memoria máxima registrada |
+| Modelo o configuración | Parámetros | Incremento | Entorno | Tiempo por ejecución | Memoria máxima registrada |
 | :-- | --: | --: | :-- | :-: | :-: |
 | Residual U-Net + concatenación | 1.190.358 | — | M4 Pro (MPS) | 4,99–5,00 h | No registrada |
 | Residual U-Net + ponderación global | 1.190.362 | +4 | M4 Pro (MPS) | 5,65–5,81 h | No registrada |
@@ -201,22 +215,21 @@ necesario no se conservó o que el mecanismo de registro no era compatible con e
 | nnU-Net `3d_fullres` | Auto-configurado | — | A100 (CUDA) | 4,77 h\*\* | No registrada |
 
 \* El tiempo y la memoria de Attention U-Net corresponden únicamente a la semilla 20260528, cuyo
-registro fue el único conservado de las corridas A100.
+registro fue el único conservado de las ejecuciones A100.
 
 \*\* El tiempo de nnU-Net se calculó desde el inicio de la época 0 hasta el mensaje de finalización
 del entrenamiento. Incluye las validaciones internas de las 250 épocas, pero no la planificación, el
 preprocesamiento, la validación final completa del *fold* ni la inferencia sobre el conjunto de test.
 
 Los mecanismos de fusión añaden pocos parámetros respecto a la red base: cuatro para la ponderación
-global, 76 para la compuerta basada en la media y 108 para la variante media+desviación. Este
-incremento es pequeño en relación con los aproximadamente 1,19 millones de parámetros de la
-Residual U-Net.
+global, 76 para la compuerta basada en la media y 108 para la variante basada en la media y la
+desviación típica. Este incremento es pequeño en relación con los aproximadamente 1,19 millones de
+parámetros de la Residual U-Net.
 
-El reducido número de parámetros adicionales no implica un coste temporal nulo. En el entorno MPS,
-la concatenación requirió aproximadamente cinco horas por corrida, mientras que las variantes con
-ponderación necesitaron entre 5,65 y 6,02 horas. Estas diferencias son tiempos de pared observados y
-pueden incluir variaciones de carga, entrada/salida y validación, por lo que no permiten aislar con
-precisión el coste del bloque de fusión.
+En el entorno MPS, la concatenación requirió 4,99–5,00 horas por ejecución y las variantes
+ponderadas, 5,65–6,02 horas: un incremento observado de aproximadamente el 13–21 %. Se trata de
+tiempos de pared, no de un *benchmark* aislado; pueden incorporar variaciones de carga,
+entrada/salida y validación y, por ello, no permiten asignar ese incremento al bloque de fusión.
 
 Swin-UNETR contiene aproximadamente 52 veces más parámetros que la Residual U-Net y fue entrenado
 en A100. Sus registros finales de tiempo y memoria no se conservaron por separado para las tres
@@ -229,11 +242,12 @@ pero no permite comparar de forma completa la eficiencia de todas las arquitectu
 ## 5.5. Análisis cualitativo
 
 Las métricas agregadas se complementaron mediante la inspección del estudio
-BraTS-GLI-02273-100. Este estudio pertenece a un sujeto no representado en entrenamiento ni
-validación y se seleccionó con finalidad ilustrativa: contiene las tres regiones con extensión
-visible y permite distinguir sus diferencias en un mismo corte. La selección favorece además un
-caso en el que la concatenación obtiene un resultado adecuado, por lo que no debe considerarse
-representativa de la distribución completa.
+BraTS-GLI-02273-100. El script eligió entre estudios con Dice de concatenación igual o superior a
+0,6 en las tres regiones, ET no trivial y al menos 3.000 vóxeles de ET, priorizando el mayor volumen
+de esa región. Después se comprobó que el sujeto no aparecía en entrenamiento ni validación y que
+las tres regiones eran visibles en el corte mostrado. Al no ser un muestreo aleatorio y favorecer a
+la concatenación, el caso se trata como una ilustración *post hoc*, no como una muestra
+representativa de la distribución.
 
 La Figura 3 muestra el corte axial de mayor extensión de WT. Las cuatro configuraciones reproducen
 la extensión principal de la lesión, aunque presentan diferencias locales en los límites y en la
@@ -248,39 +262,27 @@ U-Net y Residual U-Net con concatenación. Las configuraciones MONAI mostradas c
 semilla 20260526.
 
 La Figura 4 compara, para el mismo estudio y corte, la concatenación de la semilla 20260526 con la
-compuerta adaptativa de la semilla 20260528, correspondiente a la corrida de bajo rendimiento
+compuerta adaptativa de la semilla 20260528, correspondiente a la ejecución de bajo rendimiento
 identificada en la Tabla 12. En este ejemplo, la segunda predicción sobreestima ET y representa con
 menor precisión la distribución interna de las regiones. La figura ilustra el tipo de error
-producido por esa corrida concreta, sin utilizarse como evidencia independiente del comportamiento
+producido por esa ejecución concreta, sin utilizarse como evidencia independiente del comportamiento
 general de la estrategia.
 
-![Comparación entre la concatenación y una corrida de bajo rendimiento de la compuerta adaptativa.](figuras/fig_colapso_adaptive_gating.png)
+![Comparación entre la concatenación y una ejecución de bajo rendimiento de la compuerta adaptativa.](figuras/fig_colapso_adaptive_gating.png)
 
-**Figura 4.** Ejemplo cualitativo de una corrida de bajo rendimiento de `adaptive_gating`. De
+**Figura 4.** Ejemplo cualitativo de una ejecución de bajo rendimiento de `adaptive_gating`. De
 izquierda a derecha: referencia manual, concatenación (semilla 20260526) y compuerta adaptativa
 (semilla 20260528).
 
 ## 5.6. Síntesis de los resultados
 
-Los resultados permiten establecer las siguientes observaciones dentro del alcance del montaje
-experimental:
+Con la red base y el protocolo fijados, ninguna estrategia de ponderación mejoró de forma
+consistente la concatenación directa. La ponderación global produjo resultados equivalentes y las
+variantes adaptativas presentaron una ejecución débil cada una, asociada a una dispersión mayor. El
+diagnóstico exploratorio sobre volúmenes completos halló poca variación entre estudios, pero no
+correspondió a los puntos de control finales ni midió los pesos calculados sobre los parches y
+ventanas que utiliza el modelo.
 
-1. La concatenación y la ponderación global producen valores prácticamente coincidentes. Los pesos
-   aprendidos por la ponderación global permanecen próximos a una distribución uniforme.
-2. Las compuertas adaptativas no muestran una mejora consistente y presentan mayor variabilidad
-   entre semillas debido a una corrida de bajo rendimiento en cada variante.
-3. Los pesos de las compuertas cambian muy poco entre estudios. La variante media+desviación aumenta
-   la información de entrada del bloque, pero la variación observada entre estudios sigue siendo
-   muy pequeña y no se obtiene una mejora consistente.
-4. nnU-Net obtiene el mayor rendimiento numérico y actúa como referencia externa. Entre las
-   configuraciones MONAI, Swin-UNETR alcanza el mayor Dice medio, aunque la comparación completa de
-   arquitecturas es contextual y no una ablación causal.
-5. Las estrategias de fusión añaden pocos parámetros. Sus tiempos de pared fueron mayores que los
-   de la concatenación en las ejecuciones locales, aunque el diseño no permite atribuir esta
-   diferencia exclusivamente al bloque de fusión.
-
-En respuesta a la pregunta de investigación, bajo las configuraciones, el presupuesto y la
-partición utilizados no se obtuvo evidencia de que la ponderación adaptativa ligera mejore de forma
-consistente la concatenación directa. Este resultado negativo delimita las condiciones en las que
-los mecanismos evaluados no aportaron la ventaja esperada y constituye la base de las conclusiones
-del Capítulo 6.
+Esta respuesta se limita a tres semillas, 15.000 pasos y una partición por estudio. Las referencias
+arquitectónicas y los tiempos disponibles sitúan los resultados, pero no permiten atribuir
+diferencias a un único componente ni establecer una comparación completa de eficiencia.

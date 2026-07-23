@@ -1,19 +1,14 @@
 # 2. Marco teórico y estado del arte
 
-Este capítulo presenta los fundamentos necesarios para situar la aportación del TFM. Primero se
-describe la evolución desde las redes completamente convolucionales hasta las arquitecturas 3D con
-conexiones residuales, atención y *Transformers*. A continuación se ordena la literatura sobre
-fusión multimodal distinguiendo dos decisiones que a menudo se confunden. La primera es **en qué
-etapa** se integran las modalidades; la segunda, **mediante qué regla** se combinan. Por último, se
-introduce el *benchmark* BraTS-GLI 2024, se formalizan las métricas de evaluación, se delimita el
-análisis de coste computacional y se justifican las implementaciones consideradas en el trabajo.
-Esta revisión permite concretar la brecha abordada, que consiste en comprobar de forma controlada si
-una ponderación ligera y dependiente de la entrada aporta ventajas frente a la concatenación, sin
-cambiar la red de segmentación que recibe las modalidades.
+El marco teórico separa tres decisiones que conviene evaluar por separado: la arquitectura de
+segmentación, la etapa en la que se integran las modalidades y la regla utilizada para combinarlas.
+Esta distinción permite interpretar la ablación del trabajo: se modifica la regla de entrada, pero se
+mantiene fija la Residual U-Net 3D. BraTS-GLI 2024, las métricas Dice y HD95 y las medidas
+computacionales disponibles delimitan el escenario en el que se realiza esa comparación.
 
 ## 2.1. De las redes completamente convolucionales a U-Net 3D
 
-La segmentación semántica asigna una clase a cada elemento de una imagen. En MRI volumétrica, la
+La segmentación semántica asigna una clase a cada elemento de una imagen. En RM volumétrica, la
 entrada puede representarse como un tensor con $M$ modalidades y tres dimensiones espaciales, y
 la salida como uno o varios mapas de probabilidad con la misma correspondencia anatómica. Las
 **redes completamente convolucionales** (FCN) sustituyeron las capas densas finales de los
@@ -46,15 +41,11 @@ cómputo fijo.
 
 ## 2.2. Refinamientos convolucionales: residuos, atención y auto-configuración
 
-Sobre la estructura básica de U-Net se han desarrollado mejoras que actúan sobre distintos
-componentes del sistema. Esta sección revisa tres especialmente relevantes para el diseño y la
-interpretación de los experimentos: las conexiones residuales, que facilitan la optimización de
-redes profundas; las compuertas de atención, que seleccionan las características transmitidas por
-las conexiones de salto; y nnU-Net, que automatiza decisiones de configuración del *pipeline*
-completo. Aunque las tres propuestas parten de la familia U-Net, no resuelven el mismo problema ni
-equivalen a estrategias de fusión multimodal. Esta distinción permite justificar el uso de una
-Residual U-Net como base del estudio, de Attention U-Net como referencia arquitectónica y de
-nnU-Net como referencia externa.
+Las conexiones residuales, las compuertas de atención y la auto-configuración de nnU-Net modifican
+componentes distintos de un sistema basado en U-Net y no equivalen a estrategias de fusión
+multimodal. Esta diferencia sustenta las funciones asignadas en el experimento: Residual U-Net como
+base común de la ablación, Attention U-Net como referencia arquitectónica y nnU-Net como referencia
+externa.
 
 ### 2.2.1. Conexiones residuales
 
@@ -72,11 +63,9 @@ propagación de información y gradientes y permite entrenar redes considerablem
 decodificador sin eliminar las conexiones de salto entre ambos caminos. Se preserva así la
 estructura multiescala de U-Net y se mejora la optimización interna de cada nivel.
 
-Las conexiones residuales no deben confundirse con una estrategia de fusión multimodal. Un bloque
-residual modifica cómo se transforman las características dentro de la red. Por su parte, la fusión
-determina cómo llegan al modelo las distintas secuencias MRI. Esta independencia permite mantener
-fija una Residual U-Net 3D y cambiar únicamente la regla de combinación de modalidades, que es el
-diseño del estudio de ablación de este TFM.
+Las conexiones residuales modifican cómo se transforman las características dentro de la red; la
+fusión define cómo llegan las modalidades al modelo. Esta independencia permite cambiar la regla de
+entrada y mantener fija la Residual U-Net 3D en el estudio de ablación.
 
 ### 2.2.2. Compuertas de atención
 
@@ -88,11 +77,10 @@ puede reducir respuestas irrelevantes sin exigir una red de localización separa
 original se validó sobre segmentación abdominal. Su utilidad en gliomas debe, por tanto, evaluarse
 experimentalmente y no asumirse por traslación directa entre dominios.
 
-Esta atención sobre conexiones de salto tampoco equivale a ponderar modalidades. La primera asigna
-relevancia a posiciones y características internas. Por el contrario, una compuerta de modalidad
-decide cuánto contribuye cada secuencia de entrada. Attention U-Net se incluye en este TFM como
-referencia arquitectónica contextual, mientras que la hipótesis principal se estudia sobre una red
-residual fija.
+Las compuertas de Attention U-Net modulan espacialmente características internas de las conexiones
+de salto. En cambio, la compuerta estudiada en la ablación asigna un peso global a cada canal de
+entrada. Attention U-Net actúa, por tanto, como referencia arquitectónica contextual, mientras que
+la hipótesis principal se estudia sobre una red residual fija.
 
 ### 2.2.3. nnU-Net como *pipeline* auto-configurable
 
@@ -102,11 +90,10 @@ o 3D, el tamaño de parche y de lote, el entrenamiento, el posprocesado y la inf
 es que una parte sustancial del rendimiento depende de decisiones de ingeniería coherentes con cada
 conjunto de datos, no solo de introducir módulos arquitectónicos novedosos (Isensee et al., 2021).
 
-Esta distinción es relevante para interpretar comparaciones. Un resultado de nnU-Net refleja un
-sistema completo auto-configurado, mientras que las variantes de fusión del TFM comparten un
-*pipeline* MONAI y modifican una única variable. nnU-Net constituye por ello un *baseline* externo
-fuerte para contextualizar el nivel alcanzado, pero no forma parte de la ablación causal entre
-reglas de fusión.
+Un resultado de nnU-Net refleja un sistema completo auto-configurado, mientras que las variantes de
+fusión comparten un *pipeline* MONAI y modifican el bloque anterior al codificador. nnU-Net
+constituye por ello una referencia externa para contextualizar el nivel alcanzado, pero no forma
+parte de la ablación entre reglas de fusión.
 
 ## 2.3. *Transformers* y arquitecturas híbridas para segmentación 3D
 
@@ -127,7 +114,7 @@ multiescala que requieren los decodificadores tipo U-Net.
 
 En imagen médica se han propuesto varias formas de integrar este paradigma. **UNETR** emplea un
 Transformer como codificador de una secuencia de parches volumétricos y conecta representaciones de
-distintas profundidades con un decodificador convolucional (Hatamizadeh et al., 2022). **Swin UNETR**
+distintas profundidades con un decodificador convolucional (Hatamizadeh et al., 2022). **Swin-UNETR**
 reemplaza ese codificador por una jerarquía Swin 3D y conserva un decodificador con conexiones de
 salto. Fue presentado por Tang et al. (2022) dentro de un marco de preentrenamiento autosupervisado.
 La implementación utilizada en este TFM corresponde a la arquitectura disponible en MONAI y se
@@ -143,14 +130,12 @@ tiempo que una U-Net compacta. Por ello, CNN, modelos híbridos y Transformers p
 bajo datos, presupuesto y protocolo compatibles; la familia arquitectónica, por sí sola, no
 garantiza un resultado superior.
 
-## 2.4. Fusión multimodal en MRI
+## 2.4. Fusión multimodal en RM
 
-Las secuencias T1n, T1c, T2w y FLAIR observan el mismo volumen desde contrastes complementarios. La
-fusión multimodal especifica cómo se ponen en relación esas fuentes. Para ordenar sus variantes es
-necesario separar dos ejes. El primero es la **etapa de fusión**, es decir, el punto del flujo en el
-que se unen las modalidades; el segundo, la **regla de combinación**, que define la operación
-concreta aplicada en ese punto. «Adaptativa» describe una regla dependiente de los datos, no una etapa
-por sí misma.
+Las secuencias T1n, T1c, T2w y FLAIR observan el mismo volumen con contrastes complementarios. Para
+ordenar las variantes de fusión se separan dos decisiones: la **etapa** en la que se integran las
+modalidades y la **regla** utilizada para combinarlas. «Adaptativa» describe una regla dependiente de
+los datos, no una etapa por sí misma.
 
 Según la etapa, se distinguen tres categorías principales. En la **fusión temprana**, las
 modalidades se combinan antes del extractor o en sus primeras capas. Es eficiente y permite aprender
@@ -164,9 +149,9 @@ secuencias. Los diseños híbridos pueden emplear más de una etapa, como muestr
 combinan fusión a nivel de imagen, características o contexto global (Liu et al., 2022; Wang et al.,
 2021; Zhou et al., 2022).
 
-A partir de estas definiciones, la Tabla 1 sintetiza las tres categorías. La columna de reglas
-incluye ejemplos posibles y no establece una correspondencia exclusiva. Una ponderación aprendida,
-por ejemplo, puede aplicarse tanto a la entrada como a características intermedias.
+La Tabla 1 cruza las tres etapas con reglas compatibles; una ponderación aprendida no pertenece
+necesariamente a una única etapa y puede aplicarse tanto a la entrada como a características
+intermedias.
 
 **Tabla 1.** Etapas de fusión multimodal en segmentación de imagen médica.
 
@@ -176,19 +161,18 @@ por ejemplo, puede aplicarse tanto a la entrada como a características intermed
 | Intermedia (*feature-level fusion*) | Características de ramas específicas en uno o varios niveles | Concatenación, suma, atención cruzada o compuertas | Modela relaciones multiescala y conserva representaciones por modalidad | Más parámetros y activaciones. Aumenta la complejidad de entrenamiento e integración |
 | Tardía (*decision-level fusion*) | Mapas de probabilidad o decisiones de modelos separados | Media, voto, producto o ensamblado aprendido | Modularidad y posibilidad de especialización por modalidad | Duplica cálculo. Las modalidades no interactúan durante la extracción temprana de rasgos |
 
-La comparación muestra que la etapa no determina por sí sola el grado de adaptación. La fusión
-temprana puede ser una concatenación sin pesos explícitos o una ponderación condicionada por la
-entrada. De igual modo, una fusión intermedia puede usar coeficientes fijos. La decisión relevante
-depende del equilibrio buscado entre interacción multimodal, coste y facilidad para aislar el efecto
-experimental.
+La etapa no determina por sí sola el grado de adaptación. La fusión temprana puede ser una
+concatenación sin pesos explícitos o una ponderación condicionada por la entrada; una fusión
+intermedia también puede usar coeficientes fijos. En este trabajo se eligió la fusión temprana para
+mantener un único extractor y concentrar la comparación en la regla aplicada a los canales.
 
 ### 2.4.1. Reglas de combinación temprana
 
 Sean $\mathbf{x}_1,\ldots,\mathbf{x}_M$ las modalidades registradas de una muestra. La
 **concatenación** forma $\mathbf{x}=[\mathbf{x}_1;\ldots;\mathbf{x}_M]$ y deja que la primera capa
 aprenda filtros diferentes para cada canal. No realiza una media ni impone matemáticamente el mismo
-peso a todas las modalidades. Su rasgo distintivo es que carece de un parámetro separado e
-interpretable que reajuste de forma explícita su contribución.
+peso a todas las modalidades. Su rasgo distintivo es que carece de un parámetro separado y
+observable que reajuste de forma explícita su contribución.
 
 Una **ponderación global estática** aprende un vector de parámetros compartido por todas las
 muestras. Si $\boldsymbol{\alpha}=\operatorname{softmax}(\boldsymbol{\theta})$, cada canal puede
@@ -205,10 +189,12 @@ todos los casos.
 Una **ponderación condicionada por la entrada** calcula
 $\boldsymbol{\alpha}(\mathbf{x})=\operatorname{softmax}(g(\phi(\mathbf{x})))$, donde
 $\phi$ resume cada modalidad y $g$ genera sus coeficientes. En este TFM, los descriptores
-son estadísticas globales de intensidad y se obtiene un peso por modalidad y muestra. Los pesos se
-aplican antes del codificador y son constantes en las tres dimensiones espaciales dentro de cada
-entrada procesada. Por tanto, la propuesta es adaptativa respecto del caso, pero no constituye
-atención espacial, atención por vóxel ni atención específica de ET, TC o WT.
+son estadísticas globales de intensidad y se obtiene un peso por modalidad y tensor procesado:
+parche durante el entrenamiento y ventana durante la validación o la inferencia. Los pesos se
+aplican antes del codificador y son constantes en las tres dimensiones espaciales dentro de ese
+tensor. Por tanto, la propuesta es adaptativa respecto de su entrada inmediata, no necesariamente
+respecto del estudio completo, y no constituye atención espacial, atención por vóxel ni atención
+específica de ET, TC o WT.
 
 ### 2.4.2. Evolución del estado del arte y brecha estudiada
 
@@ -228,41 +214,31 @@ cuatro secuencias falle cuando alguna no está disponible (Ruffle et al., 2023).
 a su vez, la integración del contexto multimodal dentro de una arquitectura híbrida
 CNN-Transformer (Wang et al., 2021).
 
-Estos trabajos demuestran que la fusión puede realizarse en múltiples niveles, pero también
-introducen simultáneamente ramas, mecanismos de atención o codificadores diferentes. En esas
-condiciones resulta difícil atribuir una mejora exclusivamente a la ponderación de modalidades. La
-brecha que aborda este TFM es deliberadamente más acotada y consiste en aportar evidencia controlada
-sobre si una regla temprana, global por muestra y de muy pocos parámetros supera a la concatenación y
-a una ponderación estática cuando la Residual U-Net 3D, los datos y el entrenamiento se mantienen
-fijos. El objetivo no es reivindicar una nueva familia general de fusión ni resolver el escenario de
-modalidades ausentes, sino medir de forma reproducible el valor añadido de esa decisión concreta.
+Estos trabajos ejemplifican fusiones en distintos niveles, pero cambian simultáneamente ramas,
+mecanismos de atención o codificadores. La revisión permitió identificar que, en esas condiciones,
+resulta difícil atribuir una mejora exclusivamente a la ponderación de modalidades. La brecha
+abordada es, por ello, más acotada: comprobar si una regla temprana, global dentro de cada tensor
+procesado y de pocos parámetros supera a la concatenación y a una ponderación estática cuando la
+Residual U-Net 3D, los datos y el entrenamiento se mantienen fijos. No se propone una familia
+general de fusión ni se aborda el escenario de modalidades ausentes.
 
 ## 2.5. BraTS-GLI 2024 y evaluación de la segmentación
 
-La interpretación de los resultados exige considerar conjuntamente el escenario en el que se
-obtienen y las métricas empleadas. Esta sección presenta, en primer lugar, las particularidades de
-BraTS-GLI 2024 como *benchmark* de gliomas post-tratamiento y distingue la evaluación interna del
-TFM del protocolo oficial del reto. A continuación, define Dice y HD95, dos medidas complementarias
-que resumen, respectivamente, el solapamiento de las regiones segmentadas y el error en sus límites.
-Este marco permite comprender el alcance de los valores reportados en el Capítulo 5 y evita
-atribuirles una validez clínica u oficial superior a la respaldada por el protocolo.
+BraTS-GLI 2024 reúne estudios post-tratamiento y su carácter longitudinal permite varias
+exploraciones de un mismo sujeto (de Verdier et al., 2024); por ello, el estudio de imagen y el
+paciente no son unidades equivalentes de partición.
+Además, la evaluación interna de este trabajo no reproduce el protocolo oficial por lesión. Ambas
+diferencias limitan el alcance de los valores presentados en el Capítulo 5.
 
 ### 2.5.1. Del *benchmark* BraTS al escenario post-tratamiento
 
 BraTS estableció un marco común para comparar segmentación multimodal de tumores cerebrales mediante
 datos anotados, regiones objetivo y métricas compartidas (Menze et al., 2015). La edición
-**BraTS-GLI 2024** se centra en gliomas post-tratamiento y reúne estudios MRI multicéntricos, un
+**BraTS-GLI 2024** se centra en gliomas post-tratamiento y reúne estudios multicéntricos de RM, un
 escenario donde los cambios terapéuticos aumentan la heterogeneidad visual y la dificultad de
 delimitación (de Verdier et al., 2024). Las cuatro secuencias utilizadas por este TFM son T1n, T1c,
 T2w y FLAIR, y la evaluación se expresa de manera consistente para las regiones anidadas ET, TC y
 WT.
-
-El contexto post-tratamiento tiene además carácter longitudinal. El seguimiento clínico puede
-producir más de un estudio del mismo sujeto en momentos distintos. Esta propiedad es relevante para
-interpretar la independencia de las observaciones y para diseñar particiones, aunque el
-procedimiento concreto de separación pertenece a los capítulos de metodología y desarrollo. El
-marco teórico se limita aquí a señalar que el «caso» de imagen y el «sujeto» no tienen por qué ser
-unidades equivalentes (de Verdier et al., 2024).
 
 BraTS-GLI emplea una evaluación oficial sobre datos ocultos y métricas **por lesión**. Los resultados
 internos de este trabajo, en cambio, proceden del conjunto de test local y calculan las métricas
@@ -327,21 +303,23 @@ favorece que otros investigadores puedan reconstruir y comprobar los hallazgos (
 2021).
 
 En este TFM, estas magnitudes cumplen dos funciones distintas. Dentro de la ablación de fusión,
-permiten verificar si el mecanismo añadido es realmente ligero frente a la misma Residual U-Net.
-En la comparación contextual entre arquitecturas, ayudan a explicar las diferencias de escala, pero
-no corrigen por sí solas cambios de hardware o protocolo. Por ello, los tiempos obtenidos en
-entornos distintos se documentan como evidencia descriptiva y no como una clasificación universal
-de eficiencia.
+permiten verificar si el mecanismo añadido es ligero frente a la misma Residual U-Net. En la
+comparación contextual entre arquitecturas ayudan a explicar las diferencias de escala, pero no
+corrigen cambios de hardware o protocolo. Se obtuvo el número de parámetros de todas las
+configuraciones MONAI, mientras que nnU-Net conservó su configuración automática. El tiempo solo
+está disponible en determinados registros, la memoria máxima CUDA no se conservó para todas las
+ejecuciones y no existe una medida homogénea de latencia de inferencia. Por ello, los datos de
+entornos distintos se utilizan como evidencia descriptiva, no como una clasificación universal de
+eficiencia.
 
 ## 2.7. Implementaciones y repositorios considerados
 
-La elección de software se realizó conforme a cinco criterios: correspondencia con las familias
-arquitectónicas relevantes, soporte de tensores 3D y entradas multicanal, disponibilidad de una
-implementación pública identificable, esfuerzo de integración con el *pipeline* y licencia del
-código. MONAI aporta componentes específicos de imagen médica sobre PyTorch y una interfaz común
-para transformaciones, redes e inferencia (Cardoso et al., 2022). nnU-Net y TransBTS se evaluaron a
-partir de sus repositorios oficiales. El primero constituye un sistema externo auto-configurable y
-el segundo una alternativa híbrida especializada.
+La elección de software siguió cinco criterios: correspondencia con las familias arquitectónicas
+relevantes, soporte de tensores 3D y entradas multicanal, disponibilidad de una implementación
+pública identificable, esfuerzo de integración con el *pipeline* y licencia del código. MONAI se
+integró como base de las transformaciones, las redes y la inferencia del sistema propio (Cardoso et
+al., 2022). nnU-Net se ejecutó mediante su flujo externo auto-configurable. El repositorio oficial de
+TransBTS se revisó como alternativa híbrida, pero no se integró ni se ejecutó.
 
 La Tabla 2 aplica esos criterios a las opciones que influyeron en el diseño. «Multimodal» significa
 aquí que la implementación admite las modalidades como canales o dispone de un flujo específico
@@ -354,34 +332,28 @@ conjunto de datos y no se deducen de la licencia de estos repositorios.
 | Componente y fuente de implementación | Tipo | Soporte 3D y multimodal | Integración y reproducibilidad | Licencia del software | Decisión razonada |
 | :-- | :-- | :-- | :-- | :-- | :-- |
 | MONAI ([`Project-MONAI/MONAI`](https://github.com/Project-MONAI/MONAI)) | *Framework* de imagen médica sobre PyTorch | Operadores 3D y entradas multicanal | Integración directa; API común para datos, modelos e inferencia | Apache-2.0 | Seleccionado como base del *pipeline* propio |
-| Residual U-Net 3D (configuración propia de `monai.networks.nets.UNet`) | CNN encoder-decoder con unidades residuales | Sí; cuatro canales de entrada | Integración directa y control de una única regla de fusión | Dependencia MONAI: Apache-2.0; código del TFM: sin licencia declarada | Seleccionada como *baseline* y soporte de la ablación |
+| Residual U-Net 3D (configuración propia de `monai.networks.nets.UNet`) | CNN encoder-decoder con unidades residuales | Sí; cuatro canales de entrada | Integración directa y control de una única regla de fusión | Dependencia MONAI: Apache-2.0; código del TFM: sin licencia declarada | Seleccionada como referencia y soporte de la ablación |
 | Attention U-Net 3D (`monai.networks.nets.AttentionUnet`) | CNN con compuertas en conexiones de salto | Sí; cuatro canales de entrada | Integración directa en el mismo *pipeline* MONAI | Apache-2.0 | Seleccionada como referencia atencional contextual |
-| Swin UNETR (`monai.networks.nets.SwinUNETR`) | Híbrido Transformer jerárquico y decodificador convolucional | Sí; cuatro canales de entrada | Integración directa, con mayor demanda prevista de memoria y cómputo | Apache-2.0 | Seleccionada como referencia Transformer contextual |
-| nnU-Net v2 ([`MIC-DKFZ/nnUNet`](https://github.com/MIC-DKFZ/nnUNet)) | *Pipeline* auto-configurable | Sí; configuración 3D y múltiples canales | Flujo externo propio; requiere conversión de datos y conserva su planificación automática | Apache-2.0 | Seleccionado como *baseline* externo fuerte |
-| TransBTS ([`Rubics-Xuan/TransBTS`](https://github.com/Rubics-Xuan/TransBTS)) | Arquitectura híbrida CNN-Transformer para segmentación multimodal | Sí; diseñada para volúmenes MRI multimodales | Repositorio oficial con entorno PyTorch independiente y adaptación manual al protocolo actual | Apache-2.0 | No ejecutada: el coste de portado añadía otra variable sin reforzar la ablación principal |
+| Swin-UNETR (`monai.networks.nets.SwinUNETR`) | Híbrido Transformer jerárquico y decodificador convolucional | Sí; cuatro canales de entrada | Integración directa, con mayor demanda prevista de memoria y cómputo | Apache-2.0 | Seleccionada como referencia Transformer contextual |
+| nnU-Net v2 ([`MIC-DKFZ/nnUNet`](https://github.com/MIC-DKFZ/nnUNet)) | *Pipeline* auto-configurable | Sí; configuración 3D y múltiples canales | Flujo externo propio; requiere conversión de datos y conserva su planificación automática | Apache-2.0 | Seleccionado como referencia externa |
+| TransBTS ([`Rubics-Xuan/TransBTS`](https://github.com/Rubics-Xuan/TransBTS)) | Arquitectura híbrida CNN-Transformer para segmentación multimodal | Sí; diseñada para volúmenes multimodales de RM | Repositorio oficial con entorno PyTorch independiente y adaptación manual al protocolo actual | Apache-2.0 | No ejecutada: el coste de portado añadía otra variable sin reforzar la ablación principal |
 
-La tabla muestra que las cuatro configuraciones de fusión se apoyan en una única implementación
-residual dentro de MONAI, condición necesaria para atribuir sus diferencias a la regla de entrada.
-Attention U-Net y Swin UNETR amplían el contexto arquitectónico usando la misma infraestructura,
-mientras nnU-Net conserva su flujo externo porque su auto-configuración forma parte del propio
-método. TransBTS aporta una referencia pertinente para el estado del arte, pero integrarla habría
-mezclado el estudio de fusión con un cambio simultáneo de codificador y de entorno. Esta decisión
-reduce amplitud experimental, pero fortalece la validez interna de la comparación principal.
+Se eligió una única implementación residual para que el cambio de entrada fuera la principal
+diferencia entre las cuatro variantes. Attention U-Net y Swin-UNETR se integraron y ejecutaron en
+MONAI como referencias arquitectónicas, mientras que nnU-Net conservó su flujo externo porque la
+auto-configuración forma parte del método. Integrar TransBTS habría cambiado simultáneamente el
+codificador y el entorno; por ese motivo se mantuvo como referencia bibliográfica y no como
+experimento.
 
 ## 2.8. Posicionamiento del TFM
 
-El estado del arte presenta tres niveles de decisión relacionados pero independientes. El primero
-es la **arquitectura de segmentación**, desde U-Net 3D y sus variantes residuales o atencionales hasta
-nnU-Net y los modelos Transformer. El segundo es la **fusión multimodal**, definida por una etapa y
-una regla de combinación. El tercero es el **protocolo de evaluación**, que debe medir ET, TC y WT
-con Dice y HD95, declarar sus convenciones y acompañar la exactitud con coste computacional.
+La revisión llevó a acotar la contribución: en lugar de comparar arquitecturas completas, se
+modificó únicamente el bloque anterior al codificador residual. Se contrastaron la concatenación, la
+ponderación global aprendida e independiente de la entrada y dos compuertas condicionadas por
+estadísticas de la entrada, con tres semillas por configuración y medidas de Dice, HD95 y coste
+disponibles.
 
-El TFM se sitúa en la intersección de esos tres niveles con una pregunta intencionadamente limitada.
-No pretende demostrar que la atención sea superior en general ni competir de forma directa con la
-clasificación oficial de BraTS. Su contribución consiste en comparar concatenación, ponderación
-global estática y dos compuertas condicionadas por estadísticas de la entrada antes del mismo
-codificador residual, repetir la comparación con varias semillas y documentar el coste añadido. Las
-arquitecturas Attention U-Net, Swin UNETR y nnU-Net proporcionan contexto, no sustituyen ese
-contraste controlado. De este modo, tanto un resultado positivo como uno negativo responden al
-objetivo científico de determinar si la adaptación propuesta aporta una mejora consistente y a qué
-coste bajo el protocolo definido.
+Attention U-Net, Swin-UNETR y nnU-Net proporcionan contexto arquitectónico, pero no sustituyen esta
+comparación. El objetivo tampoco es demostrar la superioridad general de la atención ni competir con
+la clasificación oficial de BraTS, sino determinar si la adaptación propuesta aporta una mejora
+consistente bajo el protocolo definido.

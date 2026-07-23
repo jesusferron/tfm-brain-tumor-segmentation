@@ -1,58 +1,55 @@
 # 3. Metodología
 
-Este capítulo presenta el enfoque metodológico seguido para desarrollar el trabajo. La metodología
-se organiza en cinco fases y describe, a un nivel general, qué actividades se realizaron y cómo se
-relacionaron entre sí. El detalle técnico de las decisiones, adaptaciones e implementaciones se
-reserva para el Capítulo 4, que reproduce la misma estructura por fases.
-
 ## 3.1. Enfoque metodológico
 
-El trabajo no se ha guiado por una metodología estándar de gestión de proyectos, sino por una
-**metodología *ad hoc* de carácter incremental**, definida para un proyecto de investigación
-experimental en aprendizaje profundo aplicado a imagen médica. Cada fase incorporó comprobaciones
-antes de comprometer nuevos recursos de cómputo: primero se verificaron los datos y las particiones;
-después, el funcionamiento del *pipeline* y de los modelos; y, finalmente, el protocolo de
-entrenamiento, inferencia y evaluación.
+El trabajo se organizó como una secuencia incremental de verificaciones destinada a evitar
+entrenamientos costosos sobre datos o configuraciones aún no validados. Primero se acotaron la
+pregunta, el conjunto de datos y los comparadores; después se validaron los 1.621 estudios y se
+versionaron las particiones. Las pruebas mínimas posteriores comprobaron la carga de datos, la
+propagación hacia delante y la retropropagación, la inferencia y el guardado de puntos de control
+antes de ampliar el presupuesto de entrenamiento.
 
-La metodología se organiza en **cinco fases**, desde la comprensión del problema hasta el análisis
-de los resultados. Aunque existe una secuencia principal, las fases admiten realimentación. Por
-ejemplo, los primeros experimentos revelaron limitaciones de entrada/salida y del mecanismo de
-compuerta, lo que motivó adaptaciones posteriores del *pipeline* y nuevas variantes de fusión. El
-desarrollo técnico de cada fase se recoge en la sección homóloga del Capítulo 4.
+La secuencia no fue lineal. Las primeras ejecuciones revelaron un cuello de botella de
+entrada/salida en la nube y escasa variación de los pesos de la compuerta basada en la media en un
+diagnóstico sobre volúmenes completos. Estos hallazgos llevaron, respectivamente, a copiar los
+NIfTI al disco local en las ejecuciones MONAI sobre A100 y a incorporar un descriptor basado en la
+media y la desviación típica. La ruta nnU-Net mantuvo los NIfTI crudos en Drive y generó el
+preprocesamiento en almacenamiento local. Por último, una sonda de 25.000 pasos fijó en 15.000 pasos
+el presupuesto común de las ejecuciones finales. Solo después de congelar las configuraciones se
+generaron las predicciones de test. Esta secuencia constituye la **metodología *ad hoc* de carácter
+incremental** aplicada en el proyecto; el Capítulo 4 documenta las decisiones técnicas y los
+artefactos asociados.
 
 ## 3.2. Descripción general de las fases
 
-**Fase 1 — Familiarización y revisión del estado del arte.** Comprensión del problema clínico de la
-segmentación de gliomas en resonancia magnética multimodal, revisión de arquitecturas relevantes
-(U-Net y variantes, Transformers y nnU-Net) y selección justificada del conjunto de datos, del marco
-de trabajo y de las familias de modelos. Esta fase fija el alcance y la pregunta de investigación.
+**Fase 1 — Familiarización y revisión del estado del arte.** Se delimitó el problema clínico, se
+revisaron las familias U-Net, Transformer y nnU-Net y se fijaron BraTS-GLI 2024, MONAI y la ablación
+de fusión como núcleo experimental. Las decisiones de alcance quedaron registradas el 18 de mayo de
+2026 en la documentación previa al diseño y en la bitácora metodológica.
 
-**Fase 2 — Análisis y preparación de los datos.** Inventario del conjunto de datos, controles de
-calidad para verificar la integridad de los estudios y sus modalidades, y generación de particiones
-estratificadas y reproducibles de entrenamiento, validación y test. La partición se definió por
-estudio de imagen, no por sujeto. Por ello, los identificadores completos no se repiten entre
-particiones, pero un mismo sujeto puede aportar estudios a más de una de ellas. Esta circunstancia se
-tiene en cuenta al interpretar la generalización.
+**Fase 2 — Análisis y preparación de los datos.** Se inventariaron los estudios, se verificaron
+modalidades, máscaras y geometría, y se generó el reparto 70/15/15. La fase quedó materializada el
+26 de mayo en el resumen de control de calidad —1.621 estudios con estado `ok`— y en un
+manifiesto de particiones sin identificadores completos solapados. La unidad de reparto fue el
+estudio, no el sujeto; esta decisión limita la interpretación de la generalización.
 
-**Fase 3 — Diseño e implementación del *pipeline*.** Construcción del sistema experimental: entorno
-de cómputo, organización del código, preprocesamiento y aumento de datos, formulación del problema
-de segmentación, familias de modelos y mecanismos de fusión multimodal. Esta fase incluyó las
-adaptaciones necesarias para ejecutar el mismo flujo MONAI con varias arquitecturas y para preparar
-nnU-Net como referencia externa.
+**Fase 3 — Diseño e implementación del *pipeline*.** Se construyeron la interfaz de línea de
+comandos, las transformaciones, el bucle de entrenamiento, la factoría de modelos y los bloques de
+fusión. Pruebas breves de extremo a extremo verificaron carga, entrenamiento, validación,
+inferencia y puntos de control antes de las ejecuciones largas. nnU-Net se mantuvo en una ruta
+externa para conservar su planificación y preprocesamiento propios.
 
-**Fase 4 — Experimentación.** Entrenamiento de los modelos y ejecución del estudio de ablación de
-las estrategias de fusión. La comparación causal se restringe a las cuatro estrategias construidas
-sobre la misma Residual U-Net 3D, que comparten datos, arquitectura, optimización y protocolo de
-inferencia. Las configuraciones MONAI se repitieron con tres semillas. A su vez, nnU-Net se ejecutó
-una sola vez con su propio protocolo y se empleó como referencia contextual.
+**Fase 4 — Experimentación.** Se ejecutó la ablación de cuatro estrategias sobre una Residual U-Net
+común, con tres semillas por estrategia, además de Attention U-Net, Swin-UNETR y una ejecución de
+nnU-Net. El diseño reduce las diferencias deliberadas de la ablación al bloque de entrada; las
+comparaciones entre familias se consideran descriptivas porque no comparten todo el protocolo.
 
-**Fase 5 — Evaluación y análisis de resultados.** Inferencia sobre la partición de test, cálculo de
-Dice y HD95 por región, análisis de la variabilidad entre semillas y estudio de la huella
-computacional con los registros disponibles. La comparación de las estrategias de fusión es la
-principal del trabajo; la comparación entre familias de modelos es descriptiva debido a sus
-diferencias de entorno, inferencia y entrenamiento.
-
-La Tabla 3 resume las cinco fases y las actividades que delimitan cada una.
+**Fase 5 — Evaluación y análisis de resultados.** Una vez congeladas las configuraciones, se
+generaron predicciones sobre los 243 estudios de test y se calcularon Dice y HD95 para ET, TC y WT.
+El fichero `outputs/evaluation/final_all_test.csv`, cerrado el 20 de julio, resume los agregados de
+tres ejecuciones para los modelos MONAI y de la ejecución única de nnU-Net; los CSV y JSON
+individuales conservan las métricas de cada ejecución, y los registros de entrenamiento aportan la
+información computacional disponible.
 
 **Tabla 3.** Fases de la metodología *ad hoc* y actividades principales de cada una.
 
@@ -61,17 +58,15 @@ La Tabla 3 resume las cinco fases y las actividades que delimitan cada una.
 | 1 | Familiarización y revisión | Problema clínico y estado del arte; selección de datos, herramientas y familias de modelos |
 | 2 | Análisis y preparación de datos | Inventario, control de calidad y partición estratificada por estudio |
 | 3 | Diseño e implementación del *pipeline* | Entorno, código, transformaciones, modelos y mecanismos de fusión |
-| 4 | Experimentación | Protocolo MONAI, ablación controlada de fusión, multi-semilla y referencia nnU-Net |
+| 4 | Experimentación | Protocolo MONAI, ablación controlada de fusión, varias semillas y referencia nnU-Net |
 | 5 | Evaluación y análisis | Inferencia sobre test, métricas por región, variabilidad y huella computacional |
 
-La tabla muestra la separación entre la preparación del sistema y su evaluación: el test no se usa
-para seleccionar puntos de control, y la interpretación de los resultados se realiza después de
-congelar las configuraciones finales.
+El paso a la Fase 5 quedó condicionado a congelar las configuraciones finales: el test no intervino
+en la selección de puntos de control.
 
 ## 3.3. Correspondencia entre metodología y desarrollo
 
-El Capítulo 4 dedica una sección al desarrollo técnico de cada fase. La Tabla 4 establece la
-correspondencia entre ambos capítulos y sirve como guía de lectura.
+La Tabla 4 conserva la correspondencia entre las fases y su desarrollo técnico.
 
 **Tabla 4.** Correspondencia entre las fases de la metodología (Capítulo 3) y las secciones de
 desarrollo técnico (Capítulo 4).
@@ -84,14 +79,10 @@ desarrollo técnico (Capítulo 4).
 | Fase 4 — Experimentación | 4.4. Experimentación |
 | Fase 5 — Evaluación y análisis | 4.5. Evaluación y análisis de resultados |
 
-Esta correspondencia mantiene en el presente capítulo la descripción metodológica general y
-concentra en el siguiente los parámetros, componentes de código y decisiones de ejecución.
-
 ## 3.4. Cronograma
 
-El trabajo se desarrolló entre mayo y julio de 2026. La Tabla 5 presenta el cronograma por fases.
-Dado el carácter incremental de la metodología, algunas actividades se solaparon y los hallazgos de
-experimentación motivaron revisiones de implementación.
+El trabajo se desarrolló entre mayo y julio de 2026. Las fases se solaparon porque los diagnósticos
+experimentales obligaron a revisar componentes ya implementados.
 
 **Tabla 5.** Cronograma del proyecto por fases y actividades.
 
@@ -99,11 +90,13 @@ experimentación motivaron revisiones de implementación.
 | :-- | :-- | :-- |
 | 1. Familiarización y revisión | Revisión del estado del arte; decisiones de alcance y herramientas; tutorías de encuadre | Mayo 2026 |
 | 2. Análisis y preparación de datos | Control de calidad del conjunto; particiones estratificadas reproducibles | Mayo 2026 |
-| 3. Diseño e implementación | *Pipeline* MONAI; *factory* de modelos; mecanismos de fusión; adaptación de E/S y de nnU-Net | Mayo – junio 2026 |
-| 4. Experimentación | Baselines; Swin-UNETR; nnU-Net; sonda de convergencia; ablación y multi-semilla | Junio – julio 2026 |
+| 3. Diseño e implementación | *Pipeline* MONAI; factoría de modelos; mecanismos de fusión; adaptación de E/S y de nnU-Net | Mayo-junio 2026 |
+| 4. Experimentación | Referencias; Swin-UNETR; nnU-Net; sonda de convergencia; ablación y análisis multisemilla | Junio-julio 2026 |
 | 5. Evaluación y análisis | Inferencia y métricas sobre test; análisis comparativo y redacción de resultados | Julio 2026 |
 
-El solapamiento principal se produjo entre las fases 3 y 4. Las pruebas de rendimiento condujeron a
-copiar los datos al disco local en la nube, y el diagnóstico de la compuerta original llevó a
-incorporar el descriptor media+desviación. El detalle de estas adaptaciones se desarrolla en el
-Capítulo 4.
+El solapamiento principal se produjo entre las fases 3 y 4. Los hitos registrados que modificaron
+el desarrollo fueron el diagnóstico del cuello de botella de lectura el 25 de junio; el descarte de
+la caché persistente y la copia de los datos al disco local de Colab el 14 de julio; el diagnóstico
+de la compuerta y la incorporación del descriptor basado en la media y la desviación típica el 16
+de julio; y la sonda de convergencia que fijó el presupuesto final el 17 de julio. La evaluación
+conjunta sobre test se cerró el 20 de julio.
