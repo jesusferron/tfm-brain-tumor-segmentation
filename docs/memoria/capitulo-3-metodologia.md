@@ -1,7 +1,5 @@
 # 3. Metodología
 
-## 3.1. Enfoque metodológico
-
 El trabajo se organizó como una secuencia incremental de verificaciones destinada a evitar
 entrenamientos costosos sobre datos o configuraciones aún no validados. Primero se acotaron la
 pregunta, el conjunto de datos y los comparadores; después se validaron los 1.621 estudios y se
@@ -20,7 +18,7 @@ generaron las predicciones de test. Esta secuencia constituye la **metodología 
 incremental** aplicada en el proyecto; el Capítulo 4 documenta las decisiones técnicas y los
 artefactos asociados.
 
-## 3.2. Descripción general de las fases
+## 3.1. Descripción general de las fases
 
 **Fase 1 — Familiarización y revisión del estado del arte.** Se delimitó el problema clínico, se
 revisaron las familias U-Net, Transformer y nnU-Net y se fijaron BraTS-GLI 2024, MONAI y la ablación
@@ -51,6 +49,8 @@ tres ejecuciones para los modelos MONAI y de la ejecución única de nnU-Net; lo
 individuales conservan las métricas de cada ejecución, y los registros de entrenamiento aportan la
 información computacional disponible.
 
+La Tabla 3 sintetiza la finalidad y las actividades principales de las cinco fases.
+
 **Tabla 3.** Fases de la metodología *ad hoc* y actividades principales de cada una.
 
 | Fase | Denominación | Actividades principales |
@@ -64,7 +64,7 @@ información computacional disponible.
 El paso a la Fase 5 quedó condicionado a congelar las configuraciones finales: el test no intervino
 en la selección de puntos de control.
 
-## 3.3. Correspondencia entre metodología y desarrollo
+## 3.2. Correspondencia entre metodología y desarrollo
 
 La Tabla 4 conserva la correspondencia entre las fases y su desarrollo técnico.
 
@@ -79,7 +79,7 @@ desarrollo técnico (Capítulo 4).
 | Fase 4 — Experimentación | 4.4. Experimentación |
 | Fase 5 — Evaluación y análisis | 4.5. Evaluación y análisis de resultados |
 
-## 3.4. Cronograma
+## 3.3. Cronograma
 
 El trabajo se desarrolló entre mayo y julio de 2026. Las fases se solaparon porque los diagnósticos
 experimentales obligaron a revisar componentes ya implementados.

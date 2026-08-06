@@ -1,4 +1,4 @@
-# 2. Marco teórico y estado del arte
+# 2. Marco teórico, estado del arte y marco tecnológico
 
 El marco teórico separa tres decisiones que conviene evaluar por separado: la arquitectura de
 segmentación, la etapa en la que se integran las modalidades y la regla utilizada para combinarlas.
@@ -345,7 +345,30 @@ auto-configuración forma parte del método. Integrar TransBTS habría cambiado 
 codificador y el entorno; por ese motivo se mantuvo como referencia bibliográfica y no como
 experimento.
 
-## 2.8. Posicionamiento del TFM
+## 2.8. Marco tecnológico
+
+MONAI (*Medical Open Network for AI*) es un marco de código abierto especializado en inteligencia
+artificial para imagen médica y construido sobre PyTorch. Proporciona componentes reutilizables para
+cargar y transformar imágenes, definir redes y funciones de pérdida, entrenar modelos y realizar
+inferencia sobre volúmenes de gran tamaño (Cardoso et al., 2022). Su diseño modular permite mantener
+una interfaz común para arquitecturas diferentes sin ocultar las decisiones experimentales del
+proyecto.
+
+En el sistema propio, MONAI aporta la lectura de volúmenes NIfTI multicanal, las transformaciones 3D,
+las implementaciones de Residual U-Net, Attention U-Net y Swin-UNETR, y la inferencia por ventanas
+deslizantes. PyTorch proporciona los tensores, la diferenciación automática y la ejecución sobre los
+dispositivos disponibles. El bucle de entrenamiento se implementó de forma explícita para controlar
+el presupuesto por pasos, la precisión mixta, la validación, los puntos de control y el registro de
+métricas. nnU-Net se mantuvo como herramienta externa porque su planificación y preprocesamiento
+auto-configurables forman parte del método comparado.
+
+Las ejecuciones se repartieron entre un ordenador personal con Apple M4 Pro, mediante Metal
+Performance Shaders (MPS), y Google Colab con una GPU NVIDIA A100 y CUDA. Git y GitHub se utilizaron
+para versionar el código, las configuraciones YAML, las particiones y la documentación; los datos
+clínicos y los artefactos pesados permanecieron fuera del repositorio. Esta separación entre código,
+configuración, datos y resultados sustenta la trazabilidad descrita en el Apéndice A.
+
+## 2.9. Posicionamiento del TFM
 
 La revisión llevó a acotar la contribución: en lugar de comparar arquitecturas completas, se
 modificó únicamente el bloque anterior al codificador residual. Se contrastaron la concatenación, la

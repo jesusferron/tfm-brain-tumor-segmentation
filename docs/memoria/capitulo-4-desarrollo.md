@@ -39,9 +39,10 @@ prefijo `BraTS-GLI-` y construye las rutas mediante el patrón
 
 Antes de entrenar se ejecutó el subcomando `qc`, que verifica la presencia de las cuatro modalidades
 y de la máscara, la coherencia de dimensiones, espaciado y transformaciones afines, y la ausencia de
-etiquetas no permitidas. También calcula los volúmenes de ET, TC y WT que después se emplean para la
-estratificación. El artefacto `outputs/qc/brats_gli_2024_qc_summary.json` registra los 1.621 estudios
-con estado `ok`, sin categorías en `problem_counts`; 1.223 contienen ET y 398 no la contienen.
+etiquetas no permitidas. También calcula los volúmenes correspondientes al tumor realzante (ET), al
+núcleo tumoral (TC) y al tumor completo (WT), que después se emplean para la estratificación. El
+artefacto `outputs/qc/brats_gli_2024_qc_summary.json` registra los 1.621 estudios con estado `ok`,
+sin categorías en `problem_counts`; 1.223 contienen ET y 398 no la contienen.
 
 ### 4.2.3. Particiones estratificadas y reproducibles
 
@@ -52,6 +53,8 @@ factor conserva la representación de las dos entregas de datos; el segundo dist
 ET; y el tercero reparte la carga tumoral aproximada por WT. Los resultados se materializan en
 `outputs/splits/brats_gli_2024_seed20260526/` como ficheros CSV y TXT, junto con un manifiesto que
 registra la semilla, las proporciones y la distribución obtenida.
+
+La Tabla 6 resume el número de estudios, la proporción y el uso asignado a cada partición.
 
 **Tabla 6.** Distribución de las particiones de BraTS-GLI 2024.
 
@@ -76,13 +79,14 @@ de generalización a pacientes completamente nuevos.
 
 ### 4.3.1. Entornos de cómputo
 
-La asignación de hardware se decidió a partir de pruebas a resolución 128³. En MPS, las variantes
-residuales necesitaron alrededor de 1,2 s por paso en pruebas de extremo a extremo; Attention U-Net,
-unos 4,75 s; y Swin-UNETR alcanzó 124 s por paso en el *benchmark* sintético. Este salto no lineal es
-compatible con una ruta poco eficiente o una operación no optimizada en MPS, aunque no se conservó
-un perfil que permita demostrar su causa. Con 15.000 pasos por semilla, las variantes residuales
-eran viables en local, mientras que Attention U-Net y Swin-UNETR se trasladaron a la A100. La Tabla
-7 recoge el reparto final y el tratamiento de la precisión mixta.
+La asignación de hardware se decidió a partir de pruebas a resolución 128³. En Metal Performance
+Shaders (MPS), las variantes residuales necesitaron alrededor de 1,2 s por paso en pruebas de extremo
+a extremo; Attention U-Net, unos 4,75 s; y Swin-UNETR alcanzó 124 s por paso en el *benchmark*
+sintético. Este salto no lineal es compatible con una ruta poco eficiente o una operación no
+optimizada en MPS, aunque no se conservó un perfil que permita demostrar su causa. Con 15.000 pasos
+por semilla, las variantes residuales eran viables en local, mientras que Attention U-Net y
+Swin-UNETR se trasladaron a la A100. La Tabla 7 recoge el reparto final y el tratamiento de la
+precisión mixta.
 
 **Tabla 7.** Entornos utilizados en las ejecuciones finales.
 

@@ -1,18 +1,11 @@
 # 1. Introducción
 
-La segmentación tridimensional de gliomas mediante resonancia magnética (RM) combina T1n, T1c, T2w
-y FLAIR porque cada secuencia destaca componentes distintos de la
-lesión. La decisión estudiada en este trabajo no consiste solo en introducir las cuatro modalidades
-en una red, sino en determinar si una ponderación explícita y dependiente de la entrada mejora su
-combinación sin cambiar la arquitectura de segmentación ni aumentar sustancialmente su coste.
-
-## 1.1. Contexto y motivación
-
-La RM es la principal técnica de imagen empleada para evaluar gliomas. Su contraste entre tejidos
-blandos aporta información para caracterizar la lesión, planificar la cirugía y la radioterapia y
-seguir la evolución de la enfermedad. Estas funciones son especialmente relevantes ante la
-heterogeneidad biológica de los gliomas y la necesidad de preservar estructuras funcionales del
-sistema nervioso central durante el tratamiento (Langen et al., 2017; Khalighi et al., 2024).
+La resonancia magnética (RM) es la principal técnica de imagen empleada para evaluar gliomas. Su
+contraste entre tejidos blandos aporta información para caracterizar la lesión, planificar la cirugía
+y la radioterapia y seguir la evolución de la enfermedad. Estas funciones son especialmente
+relevantes ante la heterogeneidad biológica de los gliomas y la necesidad de preservar estructuras
+funcionales del sistema nervioso central durante el tratamiento (Langen et al., 2017; Khalighi et al.,
+2024).
 
 La evaluación de los gliomas mediante RM tiene un carácter multiparamétrico. En segmentación
 automática se emplean habitualmente cuatro secuencias convencionales: T1 nativa (T1n), T1 con
@@ -25,8 +18,8 @@ contenido de agua. En particular, FLAIR suprime la señal del líquido cefalorra
 visualización de alteraciones peritumorales que pueden incluir edema e infiltración. Ninguna
 modalidad describe por sí sola toda la lesión, por lo que se combinan para delimitar sus subregiones
 (Langen et al., 2017; Kouli et al., 2022). En este experimento, las regiones objetivo son el tumor
-realzante (ET), el núcleo tumoral (TC) y el tumor completo (WT), de acuerdo con la definición de
-BraTS-GLI 2024 (de Verdier et al., 2024).
+realzante, el núcleo tumoral y el tumor completo, de acuerdo con la definición de BraTS-GLI 2024
+(de Verdier et al., 2024).
 
 Cuando se requiere una cuantificación volumétrica, la delimitación manual de estas regiones por
 especialistas resulta compleja y costosa. Los límites difusos, la heterogeneidad de intensidades y
@@ -43,14 +36,7 @@ tumores cerebrales (Gao et al., 2022; Kouli et al., 2022). Su incorporación a l
 exige robustez ante variaciones en escáneres, protocolos y poblaciones, validación externa,
 interpretabilidad e integración en los flujos de trabajo (Khalighi et al., 2024).
 
-El trabajo compara cuatro reglas de fusión temprana de T1n, T1c, T2w y FLAIR. La variable
-experimental principal es el bloque que precede al codificador; la Residual U-Net 3D, los datos y el
-entrenamiento se mantienen fijos. Se analiza así **si un mecanismo de fusión adaptativa mejora la
-delimitación de ET, TC y WT frente a la concatenación convencional**, con un coste computacional
-asumible. El alcance se restringe a la segmentación de pacientes previamente diagnosticados: no se
-abordan el cribado, la detección del tumor ni el diagnóstico diferencial.
-
-## 1.2. Planteamiento del problema
+## 1.1. Planteamiento del problema
 
 Las modalidades T1n, T1c, T2w y FLAIR proporcionan contrastes complementarios, pero su contribución
 a la segmentación no es uniforme ni existe una correspondencia exclusiva entre una modalidad y una
@@ -99,15 +85,16 @@ A partir de este planteamiento, la pregunta de investigación se formula así:
 
 > ¿Puede una ponderación explícita y ligera de las modalidades T1n, T1c, T2w y FLAIR —en particular,
 > una compuerta adaptativa condicionada por la entrada— mejorar de forma consistente la segmentación
-> 3D de ET, TC y WT en BraTS-GLI 2024 frente a la concatenación directa de canales, manteniendo fija
-> la arquitectura Residual U-Net 3D y un coste computacional asumible?
+> 3D del tumor realzante, del núcleo tumoral y del tumor completo en BraTS-GLI 2024 frente a la
+> concatenación directa de canales, manteniendo fija la arquitectura Residual U-Net 3D y un coste
+> computacional asumible?
 
 La evaluación se realiza mediante el coeficiente Dice y la distancia de Hausdorff al percentil 95
-(HD95) para ET, TC y WT. La huella computacional se analiza mediante el número de parámetros y los
-registros disponibles de tiempo de entrenamiento y memoria, explicitando las diferencias entre
-entornos. Este aspecto resulta especialmente relevante en segmentación volumétrica, donde el
-incremento de complejidad de los mecanismos de atención puede traducirse en un consumo considerable
-de memoria y tiempo (Shaker et al., 2024).
+(HD95) para el tumor realzante, el núcleo tumoral y el tumor completo. La huella computacional se
+analiza mediante el número de parámetros y los registros disponibles de tiempo de entrenamiento y
+memoria, explicitando las diferencias entre entornos. Este aspecto resulta especialmente relevante
+en segmentación volumétrica, donde el incremento de complejidad de los mecanismos de atención puede
+traducirse en un consumo considerable de memoria y tiempo (Shaker et al., 2024).
 
 El alcance experimental se limita a las imágenes post-tratamiento de BraTS-GLI 2024 que contienen las
 cuatro modalidades requeridas. **El modelo no se ha entrenado ni validado para realizar cribado,
@@ -118,13 +105,13 @@ modelos a imágenes clínicas externas con distintas resoluciones o protocolos (
 En consecuencia, el trabajo evalúa una estrategia computacional de segmentación y no una herramienta
 lista para uso clínico.
 
-## 1.3. Objetivos
+## 1.2. Objetivos
 
 **Objetivo principal.** Diseñar, implementar y evaluar un sistema reproducible de segmentación
 tridimensional basado en aprendizaje profundo para **determinar si** una ponderación adaptativa y
-ligera de las modalidades T1n, T1c, T2w y FLAIR mejora la delimitación de las regiones ET, TC y WT en
-BraTS-GLI 2024 frente a la concatenación directa de canales, considerando tanto el rendimiento de
-segmentación como el coste computacional.
+ligera de las modalidades T1n, T1c, T2w y FLAIR mejora la delimitación del tumor realzante, del núcleo
+tumoral y del tumor completo en BraTS-GLI 2024 frente a la concatenación directa de canales,
+considerando tanto el rendimiento de segmentación como el coste computacional.
 
 **Objetivos específicos:**
 
@@ -139,16 +126,17 @@ segmentación como el coste computacional.
    aprendida e independiente de la entrada y dos variantes adaptativas —una basada en la media y
    otra en la media y la desviación típica—, manteniendo constantes la arquitectura base, las
    particiones y el protocolo de entrenamiento.
-5. Evaluar las variantes de fusión mediante Dice y HD95 para ET, TC y WT, y analizar su huella
-   computacional a partir del número de parámetros y de los registros disponibles de tiempo y
-   memoria.
+5. Evaluar las variantes de fusión mediante Dice y HD95 para el tumor realzante, el núcleo tumoral y
+   el tumor completo, y analizar su huella computacional a partir del número de parámetros y de los
+   registros disponibles de tiempo y memoria.
 6. Contextualizar los resultados comparándolos con arquitecturas de referencia de mayor complejidad
    (Attention U-Net y Swin-UNETR) y con la referencia externa nnU-Net.
 
-## 1.4. Organización del documento
+## 1.3. Organización del documento
 
-Los capítulos 1 y 2 delimitan la pregunta de investigación y sus fundamentos. Los capítulos 3 y 4
-separan el proceso metodológico de su implementación en el sistema MONAI y en la ruta externa de
-nnU-Net. Los capítulos 5 y 6 presentan los resultados, responden a la pregunta y exponen sus
-limitaciones. La memoria se completa con las referencias bibliográficas y un apéndice de
-reproducibilidad.
+El documento se organiza en seis capítulos. Tras esta introducción, el Capítulo 2 presenta el marco
+teórico, el estado del arte y el marco tecnológico; el Capítulo 3 describe la metodología y el diseño
+experimental; el Capítulo 4 detalla el desarrollo y la implementación; el Capítulo 5 expone y
+analiza los resultados; y el Capítulo 6 recoge las conclusiones, las limitaciones y las líneas
+futuras. Finalmente, el Apéndice A detalla los elementos necesarios para reproducir los experimentos,
+incluidas las versiones, las configuraciones, los comandos y los artefactos del proyecto.
