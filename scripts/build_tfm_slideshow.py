@@ -10,6 +10,11 @@ import os
 from pathlib import Path
 
 from PIL import Image
+from docx import Document
+from docx.enum.text import WD_ALIGN_PARAGRAPH
+from docx.shared import Cm
+from docx.shared import Pt as DocxPt
+from docx.shared import RGBColor as DocxRGBColor
 from pptx import Presentation
 from pptx.dml.color import RGBColor
 from pptx.enum.dml import MSO_LINE_DASH_STYLE
@@ -21,8 +26,11 @@ from pptx.util import Inches, Pt
 ROOT = Path(__file__).resolve().parents[1]
 TEMPLATE = next((ROOT / "docs" / "slideshow").glob("Presentaci*n corporativa*.pptx"))
 OUTPUT = ROOT / "docs" / "slideshow" / "TFM_presentacion_Jesus_Ferron_Rubio.pptx"
+NOTES_DOCX = ROOT / "docs" / "slideshow" / "TFM_guion_presentacion_Jesus_Ferron_Rubio.docx"
+NOTES_MD = ROOT / "docs" / "slideshow" / "TFM_guion_presentacion_Jesus_Ferron_Rubio.md"
 FIGURES = ROOT / "docs" / "memoria" / "figuras"
 EVAL = ROOT / "outputs" / "evaluation"
+SPEAKER_NOTES: list[dict[str, object]] = []
 
 FONT = "Arial"
 ORANGE = RGBColor(0xE6, 0x4F, 0x12)
@@ -182,15 +190,105 @@ def remove_placeholders(slide):
             shape._element.getparent().remove(shape._element)
 
 
+def get_slide_title(slide) -> str:
+    candidates = []
+    for shape in slide.shapes:
+        if not getattr(shape, "has_text_frame", False) or not shape.text.strip():
+            continue
+        max_size = 0
+        for paragraph in shape.text_frame.paragraphs:
+            for run in paragraph.runs:
+                if run.font.size is not None:
+                    max_size = max(max_size, run.font.size.pt)
+        candidates.append((max_size, shape.top / 914400, shape.text.strip().replace("\n", " ")))
+    header_candidates = [item for item in candidates if item[1] < 1.25 and item[0] >= 12]
+    pool = header_candidates or candidates
+    return max(pool, key=lambda item: item[0], default=(0, 0, "Sin título"))[2]
+
+
 def set_notes(slide, duration: str, points: list[str]):
-    tf = slide.notes_slide.notes_text_frame
-    tf.clear()
-    p = tf.paragraphs[0]
-    p.text = f"Tiempo orientativo: {duration}"
-    for point in points:
-        p = tf.add_paragraph()
-        p.text = point
-        p.level = 0
+    """Collect notes for the separate presenter guide; never embed them in the PPTX."""
+    SPEAKER_NOTES.append({
+        "number": len(SPEAKER_NOTES) + 1,
+        "title": get_slide_title(slide),
+        "duration": duration,
+        "points": points,
+    })
+
+
+def duration_seconds(value: str) -> int:
+    minutes, seconds = value.split(":", 1)
+    return int(minutes) * 60 + int(seconds)
+
+
+def build_speaker_notes():
+    total_seconds = sum(duration_seconds(str(item["duration"])) for item in SPEAKER_NOTES)
+    total_text = f"{total_seconds // 60}:{total_seconds % 60:02d}"
+
+    md = [
+        "# Guion de presentación del TFM",
+        "",
+        "**Alumno:** Jesús Ferrón Rubio  ",
+        "**Duración orientativa total:** " + total_text + "  ",
+        "**Uso:** documento independiente; el PowerPoint no contiene notas incrustadas.",
+        "",
+    ]
+    for item in SPEAKER_NOTES:
+        md.extend([
+            f"## Diapositiva {int(item['number']):02d} · {item['title']}",
+            "",
+            f"**Tiempo orientativo:** {item['duration']}",
+            "",
+        ])
+        md.extend(f"- {point}" for point in item["points"])
+        md.append("")
+    NOTES_MD.write_text("\n".join(md), encoding="utf-8")
+
+    doc = Document()
+    section = doc.sections[0]
+    section.top_margin = Cm(1.6)
+    section.bottom_margin = Cm(1.6)
+    section.left_margin = Cm(1.8)
+    section.right_margin = Cm(1.8)
+    styles = doc.styles
+    styles["Normal"].font.name = FONT
+    styles["Normal"].font.size = DocxPt(10.5)
+    styles["Heading 1"].font.name = FONT
+    styles["Heading 1"].font.size = DocxPt(15)
+    styles["Heading 1"].font.color.rgb = DocxRGBColor(0xE6, 0x4F, 0x12)
+
+    title = doc.add_paragraph()
+    title.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    title_run = title.add_run("Guion de presentación del TFM")
+    title_run.font.name = FONT
+    title_run.font.size = DocxPt(24)
+    title_run.font.bold = True
+    title_run.font.color.rgb = DocxRGBColor(0x16, 0x17, 0x1A)
+    subtitle = doc.add_paragraph()
+    subtitle.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    run = subtitle.add_run("Jesús Ferrón Rubio · Duración orientativa: " + total_text)
+    run.bold = True
+    intro = doc.add_paragraph()
+    intro.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    intro.add_run("Documento independiente del PowerPoint. Las diapositivas no contienen notas incrustadas.")
+
+    for item in SPEAKER_NOTES:
+        heading = doc.add_heading(
+            f"Diapositiva {int(item['number']):02d} · {item['title']}", level=1
+        )
+        heading.paragraph_format.space_before = DocxPt(10)
+        heading.paragraph_format.space_after = DocxPt(3)
+        timing = doc.add_paragraph()
+        timing.paragraph_format.space_after = DocxPt(3)
+        timing_run = timing.add_run(f"Tiempo orientativo: {item['duration']}")
+        timing_run.bold = True
+        timing_run.font.color.rgb = DocxRGBColor(0xE6, 0x4F, 0x12)
+        for point in item["points"]:
+            paragraph = doc.add_paragraph(style="List Bullet")
+            paragraph.paragraph_format.space_after = DocxPt(2)
+            paragraph.add_run(point)
+
+    doc.save(NOTES_DOCX)
 
 
 def add_fusion_bar_chart(slide, x, y, w, h, rows):
@@ -297,6 +395,7 @@ def load_data():
 
 
 def build_deck():
+    SPEAKER_NOTES.clear()
     all_rows, fusion_rows, seeds = load_data()
     prs = Presentation(str(TEMPLATE))
     prs.core_properties.title = "Segmentación de tumores cerebrales en resonancia magnética multimodal"
@@ -344,18 +443,23 @@ def build_deck():
     add_text(slide, "Jesús Ferrón Rubio", 0.82, 2.24, 3.3, 0.25, size=11, color=INK, bold=True, valign=MSO_ANCHOR.TOP)
     add_text(slide, "Máster Universitario en Big Data y Ciencia de Datos · Curso 2025–2026", 3.28, 2.24, 4.5, 0.27, size=8.5, color=MID, align=PP_ALIGN.RIGHT, valign=MSO_ANCHOR.TOP)
     add_footer(slide, 1, "Directora: Yudith Coromoto Cardinale Villarreal", light=True)
-    set_notes(slide, "0:40", [
+    set_notes(slide, "0:30", [
         "Presentar el trabajo en una frase: segmentación 3D de gliomas con cuatro secuencias de RM.",
         "Anticipar el foco: comprobar si una fusión adaptativa ligera mejora una concatenación directa bajo un experimento controlado.",
     ])
 
-    # 02 — Takeaways
+    # 02 — Presentation map with enough context to stand on its own
     slide = new("white")
-    add_title(slide, "Mapa de la defensa", "Tres ideas para llevarse")
+    add_title(
+        slide,
+        "Mapa de la defensa",
+        "Cómo se responde a la pregunta del TFM",
+        "BraTS-GLI 2024 · segmentación 3D de gliomas · cuatro secuencias de resonancia magnética",
+    )
     takeaways = [
-        ("01", "Pregunta controlada", "Solo cambia la regla de fusión; la Residual U-Net 3D, los datos y el entrenamiento permanecen fijos."),
-        ("02", "Resultado negativo útil", "Las compuertas adaptativas rondan 0,59 Dice y son inestables; concatenación y ponderación global alcanzan 0,706."),
-        ("03", "Alcance prudente", "La evidencia compara configuraciones dentro de BraTS-GLI; no demuestra generalización por paciente ni utilidad clínica."),
+        ("01", "Problema", "T1n, T1c, T2w y FLAIR muestran información complementaria. Hay que combinarlas para delimitar ET, TC y WT."),
+        ("02", "Experimento controlado", "Se mantiene fija la Residual U-Net 3D y solo cambia la fusión: concatenación, peso global o compuerta adaptativa."),
+        ("03", "Criterio de respuesta", "Tres semillas y evaluación en test con Dice y HD95: la mejora debe ser medible y consistente, no una corrida aislada."),
     ]
     for i, (num, head, body) in enumerate(takeaways):
         x = 0.70 + i * 4.15
@@ -363,11 +467,13 @@ def build_deck():
         add_circle(slide, x + 0.22, 2.00, 0.62, num, size=11)
         add_text(slide, head, x + 0.25, 2.85, 3.10, 0.43, size=17, color=INK, bold=True, valign=MSO_ANCHOR.TOP)
         add_text(slide, body, x + 0.25, 3.43, 3.15, 1.75, size=12.2, color=MID, valign=MSO_ANCHOR.TOP)
-        add_box(slide, x + 0.25, 5.43, 2.1, 0.35, fill=PALE, line=PALE, text=["DISEÑO", "EVIDENCIA", "LÍMITES"][i], size=8.5, color=ORANGE, bold=True, align=PP_ALIGN.CENTER, margin=0)
+        add_box(slide, x + 0.25, 5.43, 2.1, 0.35, fill=PALE, line=PALE, text=["ENTRADA", "COMPARACIÓN", "DECISIÓN"][i], size=8.5, color=ORANGE, bold=True, align=PP_ALIGN.CENTER, margin=0)
+    add_box(slide, 2.25, 6.25, 8.83, 0.46, fill=ORANGE, line=ORANGE, text="Recorrido: problema → diseño experimental → resultados → límites y conclusión", size=10, color=WHITE, bold=True, align=PP_ALIGN.CENTER, margin=0)
     add_footer(slide, 2)
-    set_notes(slide, "0:50", [
-        "Usar esta diapositiva como contrato de la presentación: diseño, evidencia y límites.",
-        "No desarrollar todavía los números; se justificarán después con la metodología y los resultados.",
+    set_notes(slide, "0:40", [
+        "Situar el trabajo antes de entrar en detalle: cuatro secuencias de RM deben combinarse para segmentar tres regiones tumorales.",
+        "Explicar que la comparación es controlada porque solo cambia el bloque de fusión.",
+        "Anticipar el criterio: una mejora solo se acepta si aparece de forma consistente en varias semillas y en las métricas finales.",
     ])
 
     # 03 — Clinical/computational problem
@@ -386,7 +492,7 @@ def build_deck():
         add_text(slide, head, x + 0.18, y + 0.14, 3.10, 0.25, size=10, color=ORANGE, bold=True, valign=MSO_ANCHOR.TOP)
         add_text(slide, body, x + 0.18, y + 0.47, 3.10, 0.62, size=11.3, color=INK, valign=MSO_ANCHOR.TOP)
     add_footer(slide, 3, "Contexto: Langen et al. (2017); Kouli et al. (2022); Khalighi et al. (2024)")
-    set_notes(slide, "1:05", [
+    set_notes(slide, "0:55", [
         "Explicar por qué la segmentación no es una clasificación: hay que asignar una región a cada vóxel del volumen.",
         "Conectar la dificultad clínica con el reto técnico: combinar señales complementarias y conservar detalle espacial.",
         "Aclarar que el sistema es apoyo a segmentación, no diagnóstico ni cribado.",
@@ -422,7 +528,7 @@ def build_deck():
         add_text(slide, f"Etiquetas BraTS {labels}", x + 1.05, 5.23, 2.15, 0.26, size=9.2, color=MID, valign=MSO_ANCHOR.TOP)
     add_text(slide, "ET ⊂ TC ⊂ WT", 5.38, 6.32, 2.6, 0.30, size=13, color=NAVY, bold=True, align=PP_ALIGN.CENTER)
     add_footer(slide, 4, "Convención regional de BraTS-GLI 2024")
-    set_notes(slide, "1:15", [
+    set_notes(slide, "1:05", [
         "Dar una frase por modalidad y evitar sugerir una correspondencia exclusiva modalidad-región.",
         "Explicar que las salidas son tres máscaras multietiqueta anidadas: ET dentro de TC y TC dentro de WT.",
         "Este carácter complementario motiva la pregunta sobre cómo fusionar los canales.",
@@ -511,7 +617,7 @@ def build_deck():
     add_box(slide, 0.60, 3.12, 1.42, 1.13, fill=PALE, line=PALE, text="CLI\n5 comandos", size=13, color=ORANGE, bold=True, align=PP_ALIGN.CENTER)
     add_box(slide, 0.60, 4.47, 1.42, 1.13, fill=PALE, line=PALE, text="Artefactos\ntrazables", size=13, color=ORANGE, bold=True, align=PP_ALIGN.CENTER)
     add_footer(slide, 8, "Fuente: Figura 1 de la memoria · implementación en tfm_brats/")
-    set_notes(slide, "1:10", [
+    set_notes(slide, "1:00", [
         "Recorrer el diagrama de izquierda a derecha: dataset, QC y splits; ruta MONAI y ruta nnU-Net; predicciones; evaluación común.",
         "Destacar la separación entre predict y evaluate, que permite recalcular métricas sin repetir inferencia.",
         "La reproducibilidad se apoya en configuraciones YAML, CLI, manifiestos y métricas versionadas.",
@@ -582,7 +688,7 @@ def build_deck():
         "El resultado no dice que toda fusión adaptativa falle; dice que estas compuertas ligeras no mejoran de forma consistente bajo este protocolo.",
     ])
 
-    # 12 — Seed instability and qualitative example
+    # 12 — Seed instability
     slide = new("white")
     add_title(slide, "05 · Resultados", "La diferencia está en la estabilidad entre semillas")
     labels = [
@@ -592,30 +698,71 @@ def build_deck():
         ("Adapt. media+desv.", seeds["adaptive_gating_meanstd"], ORANGE_4),
     ]
     for i, (label, vals, color) in enumerate(labels):
-        y = 1.55 + i * 0.56
-        add_text(slide, label, 0.62, y, 1.55, 0.28, size=9.5, color=INK, bold=True, valign=MSO_ANCHOR.TOP)
+        y = 1.68 + i * 0.78
+        add_text(slide, label, 0.72, y, 1.75, 0.30, size=11, color=INK, bold=True, valign=MSO_ANCHOR.TOP)
         for j, (seed, value) in enumerate(vals):
-            x = 2.18 + j * 1.22
+            x = 2.55 + j * 1.48
             fill = RED if value < 0.5 else color
-            add_box(slide, x, y - 0.05, 1.02, 0.38, fill=fill, line=fill, text=f"{value:.3f}".replace(".", ","), size=9.2, color=WHITE, bold=True, align=PP_ALIGN.CENTER, margin=0)
+            add_box(slide, x, y - 0.08, 1.22, 0.52, fill=fill, line=fill, text=f"{value:.3f}".replace(".", ","), size=11, color=WHITE, bold=True, align=PP_ALIGN.CENTER, margin=0)
         if i == 0:
             for j, (seed, _) in enumerate(vals):
-                add_text(slide, seed[-2:], 2.18 + j * 1.22, 1.25, 1.02, 0.20, size=7.5, color=MID, align=PP_ALIGN.CENTER)
-    add_text(slide, "Semilla (dos últimas cifras)", 2.14, 1.03, 3.47, 0.20, size=7.5, color=MID, align=PP_ALIGN.CENTER)
-    add_picture_contain(slide, FIGURES / "fig_colapso_adaptive_gating.png", 5.88, 1.50, 6.82, 3.12, border=LIGHT)
-    add_box(slide, 0.62, 4.18, 5.00, 1.58, fill=PALE, line=PALE)
-    add_text(slide, "Diagnóstico exploratorio", 0.86, 4.43, 2.65, 0.30, size=14, color=ORANGE, bold=True, valign=MSO_ANCHOR.TOP)
-    add_text(slide, "En 40 volúmenes preliminares, los pesos variaron poco entre estudios. Pero el modelo calcula pesos sobre parches y ventanas: el diagnóstico no caracteriza los checkpoints finales ni identifica la causa.", 0.86, 4.85, 4.45, 0.66, size=10.5, color=INK, valign=MSO_ANCHOR.TOP)
-    add_box(slide, 5.88, 4.92, 6.82, 0.84, fill=WHITE, line=RED, text="Una semilla débil por variante basta para invalidar una mejora «consistente»", size=12.5, color=RED, bold=True, align=PP_ALIGN.CENTER)
-    add_footer(slide, 12, "Ejemplo post hoc: BraTS-GLI-02273-100; no es una muestra representativa")
-    set_notes(slide, "1:35", [
+                add_text(slide, seed[-2:], 2.55 + j * 1.48, 1.30, 1.22, 0.20, size=8.5, color=MID, align=PP_ALIGN.CENTER)
+    add_text(slide, "Semilla (dos últimas cifras)", 2.50, 1.08, 4.25, 0.20, size=8, color=MID, align=PP_ALIGN.CENTER)
+    add_box(slide, 7.55, 1.64, 5.05, 1.55, fill=PALE, line=ORANGE)
+    add_text(slide, "2 de 3", 7.88, 1.90, 1.42, 0.52, size=28, color=ORANGE, bold=True, valign=MSO_ANCHOR.TOP)
+    add_text(slide, "ejecuciones adaptativas fueron comparables al control", 9.28, 1.95, 2.92, 0.72, size=12.5, color=INK, bold=True, valign=MSO_ANCHOR.TOP)
+    add_box(slide, 7.55, 3.52, 5.05, 1.72, fill=WHITE, line=RED)
+    add_text(slide, "1 de 3", 7.88, 3.80, 1.42, 0.52, size=28, color=RED, bold=True, valign=MSO_ANCHOR.TOP)
+    add_text(slide, "colapsó hasta ≈0,35 en cada variante adaptativa", 9.28, 3.84, 2.92, 0.72, size=12.5, color=INK, bold=True, valign=MSO_ANCHOR.TOP)
+    add_box(slide, 0.72, 5.32, 11.88, 0.92, fill=LIGHTER, line=LIGHT)
+    add_text(slide, "Diagnóstico exploratorio", 0.98, 5.56, 2.30, 0.28, size=11, color=ORANGE, bold=True, valign=MSO_ANCHOR.TOP)
+    add_text(slide, "Los pesos variaron poco entre 40 volúmenes preliminares, pero esa prueba no caracteriza los checkpoints finales ni los pesos calculados sobre parches y ventanas.", 3.10, 5.49, 9.08, 0.44, size=10.2, color=INK, valign=MSO_ANCHOR.TOP)
+    add_footer(slide, 12, "Dice medio por semilla en test")
+    set_notes(slide, "1:15", [
         "Leer por filas: las variantes estables están en torno a 0,70 en las tres semillas.",
         "Cada compuerta tiene dos ejecuciones competitivas y una caída a aproximadamente 0,35.",
-        "La imagen ilustra una sobresegmentación concreta; no se usa como prueba independiente.",
         "Ser prudente con el diagnóstico de pesos: fue exploratorio, sobre volúmenes completos y puntos de control preliminares.",
     ])
 
-    # 13 — Architectural context
+    # 13 — Qualitative comparison of architectures
+    slide = new("white")
+    add_title(slide, "05 · Resultados", "Corte axial: comparación cualitativa de las segmentaciones")
+    add_picture_contain(slide, FIGURES / "fig_comparacion_arquitecturas.png", 0.62, 1.48, 12.08, 3.30, border=LIGHT)
+    add_box(slide, 0.72, 5.02, 3.62, 1.02, fill=PALE, line=PALE)
+    add_text(slide, "REFERENCIA", 0.94, 5.20, 1.18, 0.22, size=8.5, color=ORANGE, bold=True, valign=MSO_ANCHOR.TOP)
+    add_text(slide, "La máscara manual define ET, TC y WT en el mismo corte.", 2.06, 5.16, 1.98, 0.50, size=10, color=INK, bold=True, valign=MSO_ANCHOR.TOP)
+    add_box(slide, 4.58, 5.02, 3.62, 1.02, fill=WHITE, line=ORANGE)
+    add_text(slide, "LECTURA", 4.80, 5.20, 0.92, 0.22, size=8.5, color=ORANGE, bold=True, valign=MSO_ANCHOR.TOP)
+    add_text(slide, "Todos recuperan la lesión principal, con diferencias locales en límites y estructura interna.", 5.70, 5.12, 2.22, 0.58, size=10, color=INK, bold=True, valign=MSO_ANCHOR.TOP)
+    add_box(slide, 8.44, 5.02, 4.16, 1.02, fill=LIGHTER, line=LIGHT)
+    add_text(slide, "COLORES", 8.66, 5.20, 0.92, 0.22, size=8.5, color=ORANGE, bold=True, valign=MSO_ANCHOR.TOP)
+    add_circle(slide, 9.65, 5.22, 0.30, "", fill=RED, size=1)
+    add_text(slide, "ET", 9.98, 5.19, 0.40, 0.22, size=9, color=INK, bold=True)
+    add_circle(slide, 10.45, 5.22, 0.30, "", fill=ORANGE_2, size=1)
+    add_text(slide, "TC", 10.78, 5.19, 0.42, 0.22, size=9, color=INK, bold=True)
+    add_circle(slide, 11.28, 5.22, 0.30, "", fill=RGBColor(0xF2, 0xC2, 0x30), size=1)
+    add_text(slide, "WT", 11.61, 5.19, 0.45, 0.22, size=9, color=INK, bold=True)
+    add_text(slide, "Caso BraTS-GLI-02273-100 · corte axial z=108", 8.66, 5.64, 3.48, 0.22, size=8.5, color=MID, valign=MSO_ANCHOR.TOP)
+    add_footer(slide, 13, "Caso seleccionado post hoc para ilustración; no representa la distribución completa")
+    set_notes(slide, "1:10", [
+        "Señalar primero la referencia manual y explicar los colores: ET en rojo, TC en naranja y WT en amarillo.",
+        "Recorrer las predicciones de izquierda a derecha sin convertir un único caso en evidencia general.",
+        "La imagen permite ver que las métricas agregadas esconden diferencias locales en los límites y en la estructura interna del tumor.",
+    ])
+
+    # 14 — Qualitative failure of adaptive gating
+    slide = new("white")
+    add_title(slide, "05 · Resultados", "Corte axial: ejemplo de una ejecución adaptativa de bajo rendimiento")
+    add_picture_contain(slide, FIGURES / "fig_colapso_adaptive_gating.png", 0.86, 1.43, 11.62, 4.35, border=LIGHT)
+    add_box(slide, 1.06, 5.96, 11.22, 0.68, fill=PALE, line=RED, text="En este caso, la compuerta sobreestima ET y representa con menor precisión la distribución interna de TC y WT.", size=11.5, color=RED, bold=True, align=PP_ALIGN.CENTER)
+    add_footer(slide, 14, "Ejemplo post hoc: concatenación semilla 20260526 frente a adaptive_gating semilla 20260528")
+    set_notes(slide, "1:00", [
+        "Comparar la referencia con la concatenación: la extensión principal y la distribución interna son visualmente próximas.",
+        "Después señalar la región roja sobredimensionada de la compuerta adaptativa en su ejecución débil.",
+        "Aclarar que esta figura ilustra el tipo de error de esa corrida concreta; la conclusión procede del análisis multisemilla.",
+    ])
+
+    # 15 — Architectural context
     slide = new("white")
     add_title(slide, "05 · Resultados", "Contexto arquitectónico: hay margen más allá de la fusión temprana")
     add_architecture_bar_chart(slide, 0.62, 1.55, 9.55, 4.95, all_rows)
@@ -625,7 +772,7 @@ def build_deck():
     add_text(slide, "LECTURA", 10.64, 4.60, 1.50, 0.22, size=8.5, color=ORANGE, bold=True, valign=MSO_ANCHOR.TOP)
     add_text(slide, "El margen no se agota con cuatro pesos en la entrada.", 10.64, 4.92, 1.78, 0.45, size=10, color=INK, bold=True, valign=MSO_ANCHOR.TOP)
     add_box(slide, 0.67, 6.45, 12.02, 0.42, fill=LIGHTER, line=LIGHTER, text="Comparación descriptiva, no ablación: nnU-Net usa su propio pipeline y las arquitecturas se ejecutaron en entornos distintos.", size=9.2, color=MID, align=PP_ALIGN.CENTER, margin=0)
-    add_footer(slide, 13, "Fuente: outputs/evaluation/final_all_test.csv")
+    add_footer(slide, 15, "Fuente: outputs/evaluation/final_all_test.csv")
     set_notes(slide, "1:20", [
         "Presentar esta ordenación como contexto, no como comparación causal de arquitecturas.",
         "nnU-Net alcanza 0,829 con su pipeline auto-configurado y una única ejecución.",
@@ -633,7 +780,7 @@ def build_deck():
         "La brecha sugiere que optimización, capacidad y pipeline importan más que añadir una regla ligera de fusión temprana.",
     ])
 
-    # 14 — Cost and reproducibility
+    # 16 — Cost and reproducibility
     slide = new("split")
     add_title(slide, "06 · Contribución", "Ligereza paramétrica y trazabilidad experimental")
     add_text(slide, "COSTE DE LA FUSIÓN", 0.62, 1.58, 2.6, 0.25, size=9, color=ORANGE, bold=True, valign=MSO_ANCHOR.TOP)
@@ -665,14 +812,14 @@ def build_deck():
         add_text(slide, head, 7.75, y - 0.02, 2.12, 0.26, size=12.5, color=INK, bold=True, valign=MSO_ANCHOR.TOP)
         add_text(slide, sub, 9.92, y - 0.01, 2.55, 0.31, size=9.3, color=MID, valign=MSO_ANCHOR.TOP)
     add_box(slide, 7.08, 5.80, 5.36, 0.55, fill=ORANGE, line=ORANGE, text="12 ejecuciones de ablación rastreables de configuración a métrica", size=10.5, color=WHITE, bold=True, align=PP_ALIGN.CENTER)
-    add_footer(slide, 14, "Código y artefactos: tfm_brats/, configs/ y outputs/")
-    set_notes(slide, "1:10", [
+    add_footer(slide, 16, "Código y artefactos: tfm_brats/, configs/ y outputs/")
+    set_notes(slide, "1:00", [
         "Separar ligereza paramétrica de eficiencia completa: el número de parámetros sí está cuantificado; memoria e inferencia no de forma homogénea.",
         "Los tiempos de pared incorporan I/O y validación, por lo que no son un microbenchmark del bloque.",
         "La contribución reproducible incluye el pipeline, las particiones, las configuraciones y los artefactos finales.",
     ])
 
-    # 15 — Conclusions
+    # 17 — Conclusions
     slide = new("white")
     add_title(slide, "07 · Cierre", "Conclusión, límites y siguiente paso")
     add_box(slide, 8.25, 1.65, 4.05, 4.12, fill=ORANGE, line=ORANGE)
@@ -692,7 +839,7 @@ def build_deck():
             line = slide.shapes.add_connector(MSO_CONNECTOR.STRAIGHT, inch(0.70), inch(y + 1.05), inch(7.55), inch(y + 1.05))
             line.line.color.rgb = LIGHT
     add_box(slide, 7.52, 6.07, 4.78, 0.70, fill=PALE, line=ORANGE, text="Un resultado negativo multisemilla es más informativo que una mejora aislada", size=11.5, color=ORANGE, bold=True, align=PP_ALIGN.CENTER)
-    add_footer(slide, 15)
+    add_footer(slide, 17)
     set_notes(slide, "1:30", [
         "Responder con precisión: no bajo estas configuraciones, semillas, presupuesto y partición.",
         "La ponderación global no aporta mejora; las compuertas adaptativas presentan inestabilidad.",
@@ -700,14 +847,14 @@ def build_deck():
         "Proponer como prioridad futura un split por paciente y validación externa antes de aumentar la complejidad del mecanismo.",
     ])
 
-    # 16 — Q&A
+    # 18 — Q&A
     slide = new("final")
     add_box(slide, 0.58, 0.55, 7.25, 1.55, fill=WHITE, line=ORANGE)
     add_text(slide, "Gracias", 0.88, 0.76, 3.2, 0.50, size=30, color=INK, bold=True, valign=MSO_ANCHOR.TOP)
     add_text(slide, "Preguntas y discusión", 0.90, 1.38, 4.5, 0.28, size=13, color=ORANGE, bold=True, valign=MSO_ANCHOR.TOP)
     add_text(slide, "Jesús Ferrón Rubio", 0.90, 1.73, 3.0, 0.22, size=9.5, color=MID, valign=MSO_ANCHOR.TOP)
     add_box(slide, 8.62, 5.78, 3.65, 0.64, fill=ORANGE, line=WHITE, text="Dice 0,706 · 12 ejecuciones · 1 conclusión", size=10.5, color=WHITE, bold=True, align=PP_ALIGN.CENTER)
-    add_footer(slide, 16, light=True)
+    add_footer(slide, 18, light=True)
     set_notes(slide, "0:20", [
         "Finalizar y dejar visible la síntesis numérica durante las preguntas.",
         "Tener preparados los matices sobre split por paciente, métricas, nnU-Net y diagnóstico de la compuerta.",
@@ -715,7 +862,10 @@ def build_deck():
 
     OUTPUT.parent.mkdir(parents=True, exist_ok=True)
     prs.save(str(OUTPUT))
+    build_speaker_notes()
     print(OUTPUT)
+    print(NOTES_DOCX)
+    print(NOTES_MD)
     print(f"slides={len(prs.slides)}")
 
 
